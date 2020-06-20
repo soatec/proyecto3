@@ -24,6 +24,7 @@ void create_new_bus(){
     bus = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
     bus->position.pos_x = 1000;
     bus->position.pos_y = 1050;
+    bus->color = RED;
     // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo bus
     add_vehicle_to_list(buses, bus);
     new_bus(bus);

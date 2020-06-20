@@ -7,10 +7,19 @@
  *
  */
 typedef enum {
+    STOP,
+    ROUNDABOUT,
+    DESTINATION_MAX
+} destination_type_e_t;
+
+/**
+ *
+ */
+typedef enum {
     Y,
     Z,
     ROUNDABOUT_MAX
-} roundabout_t;
+} roundabout_e_t;
 
 /**
  *
@@ -101,9 +110,27 @@ typedef enum {
 /**
  *
  */
+typedef struct stop_destination_t {
+    block_e_t      block;
+    stop_e_t       stop;
+    roundabout_e_t roundabout;
+} stop_destination_t;
+
+
+/**
+ *
+ */
+typedef union {
+    stop_destination_t stop;
+    roundabout_e_t     roundabout;
+} destination_u_t;
+
+/**
+ *
+ */
 typedef struct destination_t {
-    block_e_t block;
-    stop_e_t  stop;
+    destination_type_e_t destination_type;
+    destination_u_t      destination;
 } destination_t;
 
 /**
@@ -117,33 +144,12 @@ typedef struct position_t {
 /**
  *
  */
-typedef struct roundabout_position_t {
-    position_t center_position;
-    int        radio;
-} roundabout_position_t;
-
-/**
- *
- */
-typedef struct bridge_position_t {
-    // For "x" position, specify the center
-    position_t north_position;
-    position_t south_position;
-} bridge_position_t;
-
-/**
- *
- */
 typedef struct screen_position_data_t {
     int                   max_x;
     int                   max_y;
     // Blocks, streets, bridges are all based on car size
     int                   height_car;
-    int                   width_car;
-    // Some blocks have only 6 blocks
-    position_t            stops_position[BLOCK_MAX][STOP_MAX];
-    roundabout_position_t roundabouts[ROUNDABOUT_MAX];
-    bridge_position_t     bridges[BRIDGE_MAX];
+
 } screen_position_data_t;
 
 /**
