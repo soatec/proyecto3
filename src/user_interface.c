@@ -72,10 +72,10 @@ int initialize_ui() {
         return -1;
     }
 
-    city_background = IMG_Load("res/background.jpg");
-    car_image = IMG_Load("res/car_red.png");
-    bus_image = IMG_Load("res/bus_white.png");
-    ambulance_image = IMG_Load("res/ambulance.png");
+    city_background = IMG_Load("../resources/background.jpg");
+    car_image = IMG_Load("../resources/car_red.png");
+    bus_image = IMG_Load("../resources/bus_white.png");
+    ambulance_image = IMG_Load("../resources/ambulance.png");
 
     
     screen_position_data_t screen_position_data;
