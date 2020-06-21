@@ -22,3 +22,26 @@ void add_vehicle_to_list(vehicle_list_t *vehicle_list, vehicle_data_t *vehicle){
     current_node->next = NULL;
     vehicle_list->counter++;
 }
+
+void init_cell_list(cell_list_t *cell_list, int weight){
+    cell_list->cell_node = NULL;
+    cell_list->weight = weight;
+}
+
+void add_cell_to_list(cell_list_t *cell_list, cell_t cell){
+    cell_node_t *current_node;
+    if (cell_list->cell_node == NULL) {
+        cell_list->cell_node = malloc(sizeof(cell_node_t));
+        current_node = cell_list->cell_node;
+    } else {
+        current_node = cell_list->cell_node;
+        while (current_node->next != NULL){
+            current_node = current_node->next;
+        }
+        current_node->next = malloc(sizeof(cell_node_t));
+        current_node = current_node->next;
+    }
+    current_node->cell = cell;
+    current_node->next = NULL;
+}
+

@@ -18,6 +18,19 @@ typedef struct vehicle_list_t {
     int            counter;
 } vehicle_list_t;
 
+/*
+ * Linked list of cells
+ */
+typedef struct cell_node_t {
+    cell_t              cell;
+    struct cell_node_t *next;
+} cell_node_t;
+
+typedef struct cell_list_t {
+    cell_node_t *cell_node;
+    int          weight;
+} cell_list_t;
+
 /**
  *
  * @param vehicle_list
@@ -28,5 +41,19 @@ void init_vehicle_list(vehicle_list_t *vehicle_list);
  *
  */
 void add_vehicle_to_list(vehicle_list_t *vehicle_list, vehicle_data_t *vehicle);
+
+/**
+ *
+ * @param cell_list
+ * @param weight
+ */
+void init_cell_list(cell_list_t *cell_list, int weight);
+
+/**
+ *
+ * @param cell_list
+ * @param cell
+ */
+void add_cell_to_list(cell_list_t *cell_list, cell_t cell);
 
 #endif //PROYECTO3_UTILS_H

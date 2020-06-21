@@ -3,6 +3,9 @@
 
 // Enums
 
+#include <stdbool.h>
+#include <SDL2/SDL_rect.h>
+
 /**
  *
  */
@@ -113,7 +116,6 @@ typedef enum {
 typedef struct stop_destination_t {
     block_e_t      block;
     stop_e_t       stop;
-    roundabout_e_t roundabout;
 } stop_destination_t;
 
 
@@ -145,8 +147,8 @@ typedef struct position_t {
  *
  */
 typedef struct screen_position_data_t {
-    int                   max_x;
-    int                   max_y;
+    int                   offset_x;
+    int                   offset_y;
     // Blocks, streets, bridges are all based on car size
     int                   height_car;
 
@@ -156,6 +158,8 @@ typedef struct screen_position_data_t {
  *
  */
 typedef struct vehicle_data_t {
+    bool           active;
+    SDL_Rect       bus_image_position;
     position_t     position;
     direction_e_t  direction;
     color_e_t      color;
@@ -163,5 +167,13 @@ typedef struct vehicle_data_t {
     int            destinations_num;
     destination_t *destinations;
 } vehicle_data_t;
+
+/**
+ *
+ */
+typedef struct cell_t {
+    int row;
+    int column;
+} cell_t;
 
 #endif //PROYECTO3_THREADVILLE_TYPES_H

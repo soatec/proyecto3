@@ -2,8 +2,11 @@
 #include "user_interface.h"
 
 int main(void) {
-
-    if(initialize_ui() < 0) return 0;
+    int status;
+    status = initialize_ui();
+    if(status < 0) {
+        return EXIT_FAILURE;
+    }
 
     core_loop();
 

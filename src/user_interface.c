@@ -6,6 +6,12 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
 
+// Defines
+
+#define WINDOW_TITLE "Adventures in Threadville"
+#define WINDOW_HEIGHT 720
+#define WINDOW_WIDTH 1280
+
 // Global variables
 vehicle_list_t *cars;
 vehicle_list_t *buses;
@@ -19,9 +25,48 @@ SDL_Surface *city_background;
 SDL_Surface *car_image;
 SDL_Rect car_image_position;
 SDL_Surface *bus_image;
-SDL_Rect bus_image_position;
 SDL_Surface *ambulance_image;
 SDL_Rect ambulance_image_position;
+
+//==================
+
+void create_new_ambulance(){
+    vehicle_data_t *ambulance;
+    ambulance = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
+    ambulance->position.pos_x = 500;
+    ambulance->position.pos_y = 550;
+    // TODO: Llenar la estructura vehicle_data_t con los datos de la nueva ambulancia
+    add_vehicle_to_list(ambulances, ambulance);
+    new_ambulance(ambulance);
+}
+
+void create_new_bus(color_e_t color){
+    vehicle_data_t *bus;
+    bus = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
+    bus->color = color;
+    bus->active = true;
+    add_vehicle_to_list(buses, bus);
+    new_bus(bus);
+}
+
+void create_new_random_car(){
+    vehicle_data_t *car;
+    car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
+    car->destinations_num = 0;
+    car->position.pos_x = 0;
+    car->position.pos_y = 0;
+    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro
+    add_vehicle_to_list(cars, car);
+    new_car(car);
+}
+
+void create_new_custom_car(){
+    vehicle_data_t *car;
+    car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
+    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro dados por el usuario
+    add_vehicle_to_list(cars, car);
+    new_car(car);
+}
 
 //==================
 
@@ -47,6 +92,14 @@ void print_sdl_error(int errno) {
 }
 
 int initialize_ui() {
+    screen_position_data_t screen_position_data;
+    // TODO: Llenar la estructura screen_position_data con los datos de posiciones
+    screen_position_data.offset_x = 104;
+    screen_position_data.offset_y = 0;
+    screen_position_data.height_car = WINDOW_HEIGHT / 34;
+
+    set_screen_position_data(screen_position_data);
+
     if(SDL_Init(SDL_INIT_VIDEO) < 0) {
         print_sdl_error(0);
         return -1;
@@ -77,25 +130,16 @@ int initialize_ui() {
     bus_image = IMG_Load("../resources/bus_white.png");
     ambulance_image = IMG_Load("../resources/ambulance.png");
 
-    
-    screen_position_data_t screen_position_data;
-    // TODO: Llenar la estructura screen_position_data con los datos de posiciones
-    set_screen_position_data(screen_position_data);
 
     // Init structures of lists
-    cars = (vehicle_list_t *)malloc(sizeof(vehicle_list_t));
-    buses = (vehicle_list_t *)malloc(sizeof(vehicle_list_t));
-    ambulances = (vehicle_list_t *)malloc(sizeof(vehicle_list_t));
+    cars = malloc(sizeof(vehicle_list_t));
+    buses = malloc(sizeof(vehicle_list_t));
+    ambulances = malloc(sizeof(vehicle_list_t));
 
     // Init list of vehicles
     init_vehicle_list(cars);
     init_vehicle_list(buses);
     init_vehicle_list(ambulances);
-
-    create_new_random_car();
-    create_new_bus();
-    create_new_ambulance();
-
     return 0;
 }
 
@@ -110,8 +154,42 @@ void destroy_ui() {
     SDL_Quit();
 }
 
+void update_vehicle_positions() {
+    SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
+    vehicle_node_t * current_vehicle = cars->vehicle_node;
+    while (current_vehicle != NULL) {
+        SDL_BlitSurface(car_image, NULL, main_window_surface, &car_image_position);
+        car_image_position.x = current_vehicle->vehicle->position.pos_x;
+        car_image_position.y = current_vehicle->vehicle->position.pos_y;
+        current_vehicle = current_vehicle->next;
+    }
+    current_vehicle = buses->vehicle_node;
+    while (current_vehicle != NULL) {
+        SDL_BlitSurface(bus_image, NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
+        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
+        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
+        current_vehicle = current_vehicle->next;
+    }
+    current_vehicle = ambulances->vehicle_node;
+    while (current_vehicle != NULL) {
+        SDL_BlitSurface(ambulance_image, NULL, main_window_surface, &ambulance_image_position);
+        ambulance_image_position.x = current_vehicle->vehicle->position.pos_x;
+        ambulance_image_position.y = current_vehicle->vehicle->position.pos_y;
+        current_vehicle = current_vehicle->next;
+    }
+    SDL_UpdateWindowSurface(main_window);
+}
+
 void core_loop() {
     bool keep_window_open = true;
+
+    create_new_bus(WHITE);
+    create_new_bus(GRAY);
+    create_new_bus(BLACK);
+    create_new_bus(PINK);
+    create_new_bus(LIGHT_BLUE);
+    create_new_bus(ORANGE);
+
     while(keep_window_open)
     {
         while(SDL_PollEvent(&window_event) > 0)
@@ -123,118 +201,7 @@ void core_loop() {
                     break;
             }
         }
-        update();
-        draw();
-    }
-}
-
-void update() {
-    update_vehicle_positions();
-}
-
-void draw() {
-    SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
-    SDL_BlitSurface(car_image, NULL, main_window_surface, &car_image_position);
-    SDL_BlitSurface(bus_image, NULL, main_window_surface, &bus_image_position);
-    SDL_BlitSurface(ambulance_image, NULL, main_window_surface, &ambulance_image_position);
-    SDL_UpdateWindowSurface(main_window);
-}
-
-void update_vehicle_positions() {
-    vehicle_node_t * current_vehicle = cars->vehicle_node;
-    while (current_vehicle != NULL) {
-        car_image_position.x = current_vehicle->vehicle->position.pos_x;
-        car_image_position.y = current_vehicle->vehicle->position.pos_y;
-        current_vehicle = current_vehicle->next;
-    }
-    current_vehicle = buses->vehicle_node;
-    while (current_vehicle != NULL) {
-        bus_image_position.x = current_vehicle->vehicle->position.pos_x;
-        bus_image_position.y = current_vehicle->vehicle->position.pos_y;
-        current_vehicle = current_vehicle->next;
-    }
-    current_vehicle = ambulances->vehicle_node;
-    while (current_vehicle != NULL) {
-        ambulance_image_position.x = current_vehicle->vehicle->position.pos_x;
-        ambulance_image_position.y = current_vehicle->vehicle->position.pos_y;
-        current_vehicle = current_vehicle->next;
-    }
-}
-
-//==================
-
-void create_new_ambulance(){
-    vehicle_data_t *ambulance;
-    ambulance = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
-    ambulance->position.pos_x = 500;
-    ambulance->position.pos_y = 550;
-    // TODO: Llenar la estructura vehicle_data_t con los datos de la nueva ambulancia
-    add_vehicle_to_list(ambulances, ambulance);
-    new_ambulance(ambulance);
-}
-
-void create_new_bus(){
-    vehicle_data_t *bus;
-    bus = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
-    bus->position.pos_x = 1000;
-    bus->position.pos_y = 280;
-    bus->color = RED;
-    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo bus
-    add_vehicle_to_list(buses, bus);
-    new_bus(bus);
-}
-
-void create_new_random_car(){
-    vehicle_data_t *car;
-    car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
-    car->destinations_num = 0;
-    car->position.pos_x = 0;
-    car->position.pos_y = 0;
-    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro
-    add_vehicle_to_list(cars, car);
-    new_car(car);
-}
-
-void create_new_custom_car(){
-    vehicle_data_t *car;
-    car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
-    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro dados por el usuario
-    add_vehicle_to_list(cars, car);
-    new_car(car);
-}
-
-void start_user_interface(){
-    vehicle_node_t *current_vehicle;
-
-    printf("Bienvenido a la interfaz\n");
-    printf("Se añadirá a la simulación 1 carro, 1 bus y 1 ambulancia\n");
-
-    while (true) {
-        printf("-------\n");
-        printf("La posición de los vehículos se actualiza automáticamente por los hilos creados por la lógica\n");
-        printf("La interfaz no se preocupa por la posición de los vehículos, únicamente la refresca en pantalla\n");
-
-        current_vehicle = buses->vehicle_node;
-        while (current_vehicle != NULL){
-            printf("Actualizando posición de bus. X: %f. Y: %f.\n",
-                   current_vehicle->vehicle->position.pos_x, current_vehicle->vehicle->position.pos_y);
-            current_vehicle = current_vehicle->next;
-        }
-
-        current_vehicle = buses->vehicle_node;
-        while (current_vehicle != NULL){
-            printf("Actualizando posición de ambulancia. X: %f. Y: %f.\n",
-                   current_vehicle->vehicle->position.pos_x, current_vehicle->vehicle->position.pos_y);
-            current_vehicle = current_vehicle->next;
-        }
-
-        printf("Espera de 1 segundo\n");
-        sleep(1);
-        //TODO: Al final de cada ciclo se debe de eliminar de la lista y de la interfaz los vehículos que ya terminaron
-        // de ejecutar, esto se indica colocando su posición x o y fuera de los límites
+        update_vehicle_positions();
 
     }
-
-    //TODO: Implementar lógica de desinicialización
-
 }
