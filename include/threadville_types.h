@@ -137,8 +137,8 @@ typedef struct destination_t {
  *
  */
 typedef struct position_t {
-    int pos_x;
-    int pos_y;
+    double pos_x;
+    double pos_y;
 } position_t;
 
 /**
