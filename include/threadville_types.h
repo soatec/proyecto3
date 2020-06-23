@@ -1,6 +1,8 @@
 #ifndef PROYECTO3_THREADVILLE_TYPES_H
 #define PROYECTO3_THREADVILLE_TYPES_H
 
+#include <pthread.h>
+
 // Enums
 
 #include <stdbool.h>
@@ -16,28 +18,41 @@ typedef enum {
 } destination_type_e_t;
 
 /**
- *
+ * Roundabout names
  */
 typedef enum {
+    // West roundabout
     Y,
+
+    // East roundabout
     Z,
     ROUNDABOUT_MAX
 } roundabout_e_t;
 
 /**
- *
+ * Bridge names
  */
 typedef enum {
+    // External bridge
     LARRY,
+
+    // Internal bridge
     CURLY,
+
+    // Middle bridge
     MOE,
+
+    // Internal bridge
     SHEMP,
+
+    // External bridge
     JOE,
+
     BRIDGE_MAX
 } bridge_e_t;
 
 /**
- *
+ * Stop identifiers
  */
 typedef enum {
     ONE,
@@ -52,7 +67,7 @@ typedef enum {
 } stop_e_t;
 
 /**
- *
+ * Block identifiers
  */
 typedef enum {
     A,
@@ -83,17 +98,18 @@ typedef enum {
 } block_e_t;
 
 /**
- *
+ * Directions
  */
 typedef enum {
     NORTH,
     SOUTH,
     EAST,
-    WEST
+    WEST,
+    DIRECTION_MAX
 } direction_e_t;
 
 /**
- *
+ * Vehicule colors
  */
 typedef enum {
     RED,
@@ -108,10 +124,19 @@ typedef enum {
     YELLOW
 } color_e_t;
 
+/**
+ * Vehicule types
+ */
+typedef enum {
+    BUS,
+    CAR,
+    AMBULANCE
+} vehicule_type_e_t;
+
 // Structs
 
 /**
- *
+ * Destination structure
  */
 typedef struct stop_destination_t {
     block_e_t      block;
@@ -120,7 +145,7 @@ typedef struct stop_destination_t {
 
 
 /**
- *
+ * Position structure
  */
 typedef union {
     stop_destination_t stop;
@@ -128,7 +153,7 @@ typedef union {
 } destination_u_t;
 
 /**
- *
+ * Roundabout position structure
  */
 typedef struct destination_t {
     destination_type_e_t destination_type;
@@ -136,7 +161,7 @@ typedef struct destination_t {
 } destination_t;
 
 /**
- *
+ * Bridge position structure
  */
 typedef struct position_t {
     double pos_x;
@@ -144,7 +169,7 @@ typedef struct position_t {
 } position_t;
 
 /**
- *
+ * Screen position data structure
  */
 typedef struct screen_position_data_t {
     int                   offset_x;
@@ -155,17 +180,20 @@ typedef struct screen_position_data_t {
 } screen_position_data_t;
 
 /**
- *
+ * Vehicule data structure
  */
 typedef struct vehicle_data_t {
-    bool           active;
-    SDL_Rect       bus_image_position;
-    position_t     position;
-    direction_e_t  direction;
-    color_e_t      color;
+    int               id;
+    vehicule_type_e_t type;
+    bool              active;
+    SDL_Rect          bus_image_position;
+    position_t        position;
+    direction_e_t     direction;
+    color_e_t         color;
     // If this is a car and destinations_num = 0, destinations will be random
-    int            destinations_num;
-    destination_t *destinations;
+    int               destinations_num;
+    destination_t    *destinations;
+    pthread_t         thread;
 } vehicle_data_t;
 
 /**

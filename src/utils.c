@@ -1,4 +1,6 @@
 #include <utils.h>
+#include <math.h>
+#include <stdlib.h>
 
 void init_vehicle_list(vehicle_list_t *vehicle_list){
     vehicle_list->counter = 0;
@@ -45,3 +47,9 @@ void add_cell_to_list(cell_list_t *cell_list, cell_t cell){
     current_node->next = NULL;
 }
 
+double exponential_random(double mean)
+{
+  double uniform;
+  uniform = (rand() + 1) / (RAND_MAX + 2.0);	//Number in ]0,1[
+  return -log(1-uniform) * mean;	//Inversion method
+}
