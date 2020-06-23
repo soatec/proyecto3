@@ -71,6 +71,8 @@ typedef struct threadville_resources_t {
     sem_t                  threadville_matrix_mutexes[MATRIX_ROWS][MATRIX_COLUMNS];
     graph_node_t           threadville_graph[NODES_NUM][NODES_NUM];
     screen_position_data_t screen_position_data;
+    pthread_cond_t         init_done;
+    pthread_mutex_t        mutex;
 } threadville_resources_t;
 
 
@@ -556,6 +558,7 @@ void move(cell_node_t *current_cell, vehicle_data_t *car, int micro_seconds){
 void* move_bus(void *arg) {
     vehicle_data_t *bus = (vehicle_data_t *)arg;
     cell_list_t *cell_list;
+    int error_check;
     int current = 0;
     int destination = current + 1;
     cell_t initial_cell = get_cell(&bus->destinations[0]);
@@ -563,9 +566,16 @@ void* move_bus(void *arg) {
     bus->position.pos_x = current_position.pos_x;
     bus->position.pos_y = current_position.pos_y;
 
-    sleep(20);
+    pthread_mutex_lock(&threadville_resources.mutex);
+    error_check = pthread_cond_wait(&threadville_resources.init_done, &threadville_resources.mutex);
+    pthread_mutex_unlock(&threadville_resources.mutex);
+
+    if (error_check != 0) {
+        fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+
     while(bus->active){
-        sleep(STOP_TIME_SECS);
         cell_list = get_path(get_cell(&bus->destinations[current]), get_cell(&bus->destinations[destination]));
         cell_node_t *current_cell = cell_list->cell_node;
         if (cell_list->weight == INF){
@@ -579,6 +589,7 @@ void* move_bus(void *arg) {
         }
         current = (current + 1) % bus->destinations_num;
         destination = (destination + 1) % bus->destinations_num;
+        sleep(STOP_TIME_SECS);
     }
     pthread_exit(NULL);
 }
@@ -781,8 +792,10 @@ void* load_matrix_data(void *arg) {
                             threadville_resources.threadville_graph[k][j].weight;
                     threadville_resources.threadville_graph[i][j].index =
                             threadville_resources.threadville_graph[k][j].index;
-                }
-    printf("finished\n");
+    }
+    pthread_mutex_lock(&threadville_resources.mutex);
+    pthread_cond_broadcast(&threadville_resources.init_done);
+    pthread_mutex_unlock(&threadville_resources.mutex);
     pthread_exit(NULL);
 }
 
@@ -796,6 +809,17 @@ void set_screen_position_data(screen_position_data_t screen_position_data){
         fprintf(stderr, "Error executing pthread_create. (Errno %d: %s)\n",
                 errno, strerror(errno));
     }
+
+    error_check = pthread_cond_init(
+                  &threadville_resources.init_done,
+                  NULL
+    );
+    if (error_check != 0) {
+        fprintf(stderr, "Error executing pthread_cond_init. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+
+    pthread_mutex_init(&threadville_resources.mutex, NULL);
 
     threadville_resources.screen_position_data = screen_position_data;
 
