@@ -71,7 +71,8 @@ typedef struct threadville_resources_t {
     sem_t                  threadville_matrix_mutexes[MATRIX_ROWS][MATRIX_COLUMNS];
     graph_node_t           threadville_graph[NODES_NUM][NODES_NUM];
     screen_position_data_t screen_position_data;
-    pthread_cond_t         init_done;
+    bool                   init_done;
+    pthread_cond_t         init_thread_done;
     pthread_mutex_t        mutex;
 } threadville_resources_t;
 
@@ -566,9 +567,11 @@ void* move_bus(void *arg) {
     bus->position.pos_x = current_position.pos_x;
     bus->position.pos_y = current_position.pos_y;
 
-    pthread_mutex_lock(&threadville_resources.mutex);
-    error_check = pthread_cond_wait(&threadville_resources.init_done, &threadville_resources.mutex);
-    pthread_mutex_unlock(&threadville_resources.mutex);
+    if (!threadville_resources.init_done) {
+        pthread_mutex_lock(&threadville_resources.mutex);
+        error_check = pthread_cond_wait(&threadville_resources.init_thread_done, &threadville_resources.mutex);
+        pthread_mutex_unlock(&threadville_resources.mutex);
+    }
 
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
@@ -794,8 +797,9 @@ void* load_matrix_data(void *arg) {
                             threadville_resources.threadville_graph[k][j].index;
     }
     pthread_mutex_lock(&threadville_resources.mutex);
-    pthread_cond_broadcast(&threadville_resources.init_done);
+    pthread_cond_broadcast(&threadville_resources.init_thread_done);
     pthread_mutex_unlock(&threadville_resources.mutex);
+    threadville_resources.init_done = true;
     pthread_exit(NULL);
 }
 
@@ -811,7 +815,7 @@ void set_screen_position_data(screen_position_data_t screen_position_data){
     }
 
     error_check = pthread_cond_init(
-                  &threadville_resources.init_done,
+                  &threadville_resources.init_thread_done,
                   NULL
     );
     if (error_check != 0) {
