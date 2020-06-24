@@ -3,6 +3,10 @@
 
 #include <pthread.h>
 
+// Defines
+
+#define BUSES_NUM 9
+
 // Enums
 
 #include <stdbool.h>
