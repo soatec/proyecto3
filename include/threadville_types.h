@@ -2,6 +2,8 @@
 #define PROYECTO3_THREADVILLE_TYPES_H
 
 #include <pthread.h>
+#include <stdbool.h>
+#include <SDL2/SDL_rect.h>
 
 // Defines
 
@@ -9,8 +11,16 @@
 
 // Enums
 
-#include <stdbool.h>
-#include <SDL2/SDL_rect.h>
+/**
+ *
+ */
+typedef enum {
+    ROAD_CELL,
+    INTERSECTION_CELL,
+    BRIDGE_CELL,
+    ROUNDABOUT_CELL,
+    HIGHWAY_CELL
+} cell_type_e_t;
 
 /**
  *
@@ -205,8 +215,8 @@ typedef struct vehicle_data_t {
  *
  */
 typedef struct cell_t {
-    int row;
-    int column;
+    int           row;
+    int           column;
 } cell_t;
 
 #endif //PROYECTO3_THREADVILLE_TYPES_H

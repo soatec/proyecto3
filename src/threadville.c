@@ -69,6 +69,7 @@ typedef struct graph_node_t {
  */
 typedef struct threadville_resources_t {
     pthread_mutex_t        threadville_matrix_mutexes[MATRIX_ROWS][MATRIX_COLUMNS];
+    cell_type_e_t          cells_type[MATRIX_ROWS][MATRIX_COLUMNS];
     graph_node_t           threadville_graph[NODES_NUM][NODES_NUM];
     screen_position_data_t screen_position_data;
     bool                   init_done;
@@ -603,14 +604,15 @@ void* move_bus(void *arg) {
         error_check = pthread_cond_wait(&threadville_resources.init_thread_done, &threadville_resources.mutex);
         pthread_mutex_unlock(&threadville_resources.mutex);
     }
-
-    pthread_t thread;
-    pthread_create(&thread, NULL, test_bus, bus);
-
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
                 errno, strerror(errno));
     }
+
+    /*
+    pthread_t thread;
+    pthread_create(&thread, NULL, test_bus, bus);
+    */
 
     cell_list = get_path(get_cell(&bus->destinations[current_idx]), get_cell(&bus->destinations[destination_idx]));
     if (cell_list->weight == INF){
@@ -809,6 +811,7 @@ void* load_matrix_data(void *arg) {
     for (int row = 0; row < ROAD_WEST_TO_EAST_NUM; row++){
         current_row = roads_west_to_east_rows[row];
         for (int column = 0; column < MATRIX_COLUMNS - 1; column++){
+            threadville_resources.cells_type[current_row][column] = ROAD_CELL;
             threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row]
             [column + MATRIX_COLUMNS * current_row + 1].weight = 1;
         }
@@ -818,6 +821,7 @@ void* load_matrix_data(void *arg) {
     for (int row = 0; row < ROAD_EAST_TO_WEST_NUM; row++){
         current_row = roads_east_to_west_rows[row];
         for (int column = 0; column < MATRIX_COLUMNS - 1; column++){
+            threadville_resources.cells_type[current_row][column] = ROAD_CELL;
             threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row + 1]
             [column + MATRIX_COLUMNS * current_row].weight = 1;
         }
@@ -829,6 +833,11 @@ void* load_matrix_data(void *arg) {
     for (int column = 0; column < ROAD_SOUTH_TO_NORTH_NUM; column++){
         current_column = roads_south_to_north[column];
         for (int row = 1; row <= UPTOWN_MOST_SOUTHERN_ROW; row++){
+            if (threadville_resources.cells_type[row][current_column] == ROAD_CELL){
+                threadville_resources.cells_type[row][current_column] = INTERSECTION_CELL;
+            } else {
+                threadville_resources.cells_type[row][current_column] = ROAD_CELL;
+            }
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * row]
             [current_column + MATRIX_COLUMNS * (row - 1)].weight = 1;
         }
@@ -838,6 +847,11 @@ void* load_matrix_data(void *arg) {
     for (int column = 0; column < ROAD_NORTH_TO_SOUTH_NUM; column++){
         current_column = roads_north_to_south[column];
         for (int row = 1; row <= UPTOWN_MOST_SOUTHERN_ROW; row++){
+            if (threadville_resources.cells_type[row][current_column] == ROAD_CELL){
+                threadville_resources.cells_type[row][current_column] = INTERSECTION_CELL;
+            } else {
+                threadville_resources.cells_type[row][current_column] = ROAD_CELL;
+            }
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (row-1)]
             [current_column + MATRIX_COLUMNS * row].weight = 1;
         }
@@ -849,6 +863,11 @@ void* load_matrix_data(void *arg) {
     for (int column = 0; column < ROAD_SOUTH_TO_NORTH_NUM; column++){
         current_column = roads_south_to_north[column];
         for (int row = UNDERGROUND_MOST_NORTHERN_ROW + 1; row < MATRIX_ROWS; row++){
+            if (threadville_resources.cells_type[row][current_column] == ROAD_CELL){
+                threadville_resources.cells_type[row][current_column] = INTERSECTION_CELL;
+            } else {
+                threadville_resources.cells_type[row][current_column] = ROAD_CELL;
+            }
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * row]
             [current_column + MATRIX_COLUMNS * (row - 1)].weight = 1;
         }
@@ -858,6 +877,11 @@ void* load_matrix_data(void *arg) {
     for (int column = 0; column < ROAD_NORTH_TO_SOUTH_NUM; column++){
         current_column = roads_north_to_south[column];
         for (int row = UNDERGROUND_MOST_NORTHERN_ROW + 1; row < MATRIX_ROWS; row++){
+            if (threadville_resources.cells_type[row][current_column] == ROAD_CELL){
+                threadville_resources.cells_type[row][current_column] = INTERSECTION_CELL;
+            } else {
+                threadville_resources.cells_type[row][current_column] = ROAD_CELL;
+            }
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (row - 1)]
             [current_column + MATRIX_COLUMNS * row].weight = 1;
         }
@@ -868,33 +892,33 @@ void* load_matrix_data(void *arg) {
     // Add bridges
     for (int bridge = 0; bridge < BRIDGE_MAX; bridge++) {
         for (int chunk = 0; chunk < BRIDGE_SIZE; chunk++){
+            current_row = first_bridge.row + chunk;
+            current_column = first_bridge.column + SEPARATION_BETWEEN_BRIDGES * bridge;
+            threadville_resources.cells_type[current_row][current_column] = BRIDGE_CELL;
             threadville_resources.threadville_graph
-            [first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + chunk) + SEPARATION_BETWEEN_BRIDGES * bridge]
-            [first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + chunk + 1) +
-             SEPARATION_BETWEEN_BRIDGES * bridge].weight = 1;
+            [current_column + MATRIX_COLUMNS * current_row]
+            [current_column + MATRIX_COLUMNS * (current_row + 1) ].weight = 1;
             threadville_resources.threadville_graph
-            [first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + chunk + 1) +
-             SEPARATION_BETWEEN_BRIDGES * bridge]
-            [first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + chunk) + SEPARATION_BETWEEN_BRIDGES * bridge].weight = 1;
+            [current_column + MATRIX_COLUMNS * (current_row + 1)]
+            [current_column + MATRIX_COLUMNS * current_row].weight = 1;
         }
     }
 
     // Connect bridges with roads
     for (int bridge = 0; bridge < BRIDGE_MAX; bridge++) {
-        // Northen side of the bridge
-        last_road_chunk = first_bridge.column + MATRIX_COLUMNS * (first_bridge.row - 1) + SEPARATION_BETWEEN_BRIDGES * bridge;
-        first_bridge_chunk = first_bridge.column + MATRIX_COLUMNS * (first_bridge.row) + SEPARATION_BETWEEN_BRIDGES * bridge;
+        // Northern side of the bridge
+        current_column = first_bridge.column + SEPARATION_BETWEEN_BRIDGES * bridge;
+        last_road_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row - 1) ;
+        first_bridge_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row) ;
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = 1;
         threadville_resources.threadville_graph[first_bridge_chunk][last_road_chunk + 1].weight = 1;
 
-        // Northen side of the bridge
-        last_road_chunk = first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE - 1) + SEPARATION_BETWEEN_BRIDGES * bridge;
-        first_bridge_chunk = first_bridge.column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE) + SEPARATION_BETWEEN_BRIDGES * bridge;
+        // Northern side of the bridge
+        last_road_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE - 1);
+        first_bridge_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE);
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = 1;
         threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk].weight = 1;
     }
-
-
 
     t = clock();
     // Solve Floyd algorithm
