@@ -14,7 +14,7 @@
 
 // Global variables
 vehicle_list_t *cars;
-vehicle_list_t *buses;
+vehicle_data_t *buses[BUSES_NUM];
 vehicle_list_t *ambulances;
 
 SDL_Window *main_window;
@@ -42,10 +42,10 @@ void create_new_ambulance(){
 
 void create_new_bus(color_e_t color){
     vehicle_data_t *bus;
-    bus = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
+    bus = malloc(sizeof(vehicle_data_t));
     bus->color = color;
     bus->active = true;
-    add_vehicle_to_list(buses, bus);
+    buses[color] = bus;
     new_bus(bus);
 }
 
@@ -133,12 +133,10 @@ int initialize_ui() {
 
     // Init structures of lists
     cars = malloc(sizeof(vehicle_list_t));
-    buses = malloc(sizeof(vehicle_list_t));
     ambulances = malloc(sizeof(vehicle_list_t));
 
     // Init list of vehicles
     init_vehicle_list(cars);
-    init_vehicle_list(buses);
     init_vehicle_list(ambulances);
     return 0;
 }
@@ -163,13 +161,6 @@ void update_vehicle_positions() {
         car_image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
-    current_vehicle = buses->vehicle_node;
-    while (current_vehicle != NULL) {
-        SDL_BlitSurface(bus_image, NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
-        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
-        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
-        current_vehicle = current_vehicle->next;
-    }
     current_vehicle = ambulances->vehicle_node;
     while (current_vehicle != NULL) {
         SDL_BlitSurface(ambulance_image, NULL, main_window_surface, &ambulance_image_position);
@@ -177,7 +168,22 @@ void update_vehicle_positions() {
         ambulance_image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
+
+    for (int bus = 0; bus < BUSES_NUM; bus++) {
+        if (buses[bus] == NULL){
+            continue;
+        }
+        SDL_BlitSurface(bus_image, NULL, main_window_surface, &buses[bus]->bus_image_position);
+        buses[bus]->bus_image_position.x = buses[bus]->position.pos_x;
+        buses[bus]->bus_image_position.y = buses[bus]->position.pos_y;
+    }
     SDL_UpdateWindowSurface(main_window);
+}
+
+//TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
+// TODO: CHECK THIS EXAMPLE
+void disable_white_bus(){
+    disable_bus(buses[WHITE]);
 }
 
 void core_loop() {
@@ -189,8 +195,6 @@ void core_loop() {
     create_new_bus(PINK);
     create_new_bus(LIGHT_BLUE);
     create_new_bus(ORANGE);
-
-    //TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
 
     while(keep_window_open)
     {

@@ -628,22 +628,31 @@ void* move_bus(void *arg) {
 
     while (current_destination != NULL){
         if (!bus->active){
+            // Hide bus
             bus->position.pos_x = -100;
             bus->position.pos_y = -100;
+
+            // Wait until it's re-enabled
             pthread_mutex_lock(&bus->mutex);
             pthread_mutex_unlock(&bus->mutex);
 
+            // Unlock old mutexes
             pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
             [current_destination->cell.row][current_destination->cell.column]);
             pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
             [current_destination->next->cell.row][current_destination->next->cell.column]);
 
-
+            // Set current position to the first stop
             current_destination = cell_list->cell_node;
             current_position = get_pos(current_destination->cell);
-            current_destination = cell_list->cell_node;
             bus->position.pos_x = current_position.pos_x;
             bus->position.pos_y = current_position.pos_y;
+            pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+
+            // Lock initial mutexes
+            [current_destination->cell.row][current_destination->cell.column]);
+            pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+            [current_destination->next->cell.row][current_destination->next->cell.column]);
         }
         if (current_destination->is_stop){
             sleep(STOP_TIME_SECS);
