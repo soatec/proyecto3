@@ -190,6 +190,8 @@ void core_loop() {
     create_new_bus(LIGHT_BLUE);
     create_new_bus(ORANGE);
 
+    //TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
+
     while(keep_window_open)
     {
         while(SDL_PollEvent(&window_event) > 0)

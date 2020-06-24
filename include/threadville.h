@@ -111,4 +111,16 @@ int middle_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id);
  */
 int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id);
 
+/**
+ *
+ * @param bus
+ */
+void disable_bus(vehicle_data_t *bus);
+
+/**
+ *
+ * @param bus
+ */
+void enable_bus(vehicle_data_t *bus);
+
 #endif //PROYECTO3_THREADVILLE_H

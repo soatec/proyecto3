@@ -68,7 +68,7 @@ typedef struct graph_node_t {
  *
  */
 typedef struct threadville_resources_t {
-    sem_t                  threadville_matrix_mutexes[MATRIX_ROWS][MATRIX_COLUMNS];
+    pthread_mutex_t        threadville_matrix_mutexes[MATRIX_ROWS][MATRIX_COLUMNS];
     graph_node_t           threadville_graph[NODES_NUM][NODES_NUM];
     screen_position_data_t screen_position_data;
     bool                   init_done;
@@ -418,6 +418,24 @@ void* bridge_timer(void *arg) {
   pthread_exit(NULL);
 }
 
+void* test_bus(void *arg) {
+    vehicle_data_t *car = (vehicle_data_t *)arg;
+    sleep(20);
+    printf("BUS DESHABILITADO\n");
+    disable_bus(car);
+    sleep(20);
+    printf("BUS HABILITADO\n");
+    enable_bus(car);
+    sleep(20);
+    printf("BUS DESHABILITADO 2\n");
+    disable_bus(car);
+    sleep(20);
+    printf("BUS HABILITADO 2\n");
+    enable_bus(car);
+    pthread_exit(NULL);
+
+}
+
 
 // PUBLIC FUNCTIONS
 void* move_vehicle(void *arg) {
@@ -526,19 +544,22 @@ position_t get_pos(cell_t cell){
     return position;
 }
 
-void move(cell_node_t *current_cell, vehicle_data_t *car, int micro_seconds){
-    position_t position = get_pos(current_cell->cell);
+void move(cell_t *current_cell, cell_t *next_cell, cell_t *after_next_cell, vehicle_data_t *car, int micro_seconds){
+    position_t position = get_pos(*current_cell);
     double current_x = position.pos_x;
     double current_y = position.pos_y;
     car->position.pos_x = current_x;
     car->position.pos_y = current_y;
-    cell_node_t *next_cell = current_cell->next;
-    if (next_cell == NULL){
-        return;
-    }
-    position = get_pos(next_cell->cell);
+
+    position = get_pos(*next_cell);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
+
+    pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+    [after_next_cell->row][after_next_cell->column]);
+    pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+    [current_cell->row][current_cell->column]);
+
     while(current_x != final_x || current_y != final_y) {
         if (current_x < final_x) {
             current_x++;
@@ -557,13 +578,23 @@ void move(cell_node_t *current_cell, vehicle_data_t *car, int micro_seconds){
 }
 
 void* move_bus(void *arg) {
-    vehicle_data_t *bus = (vehicle_data_t *)arg;
+    cell_t *current_cell;
+    cell_t *next_cell;
+    cell_t *after_next_cell;
+
+    cell_node_t *current_destination;
+    cell_node_t *next_destination;
+    cell_node_t *after_next_destination;
     cell_list_t *cell_list;
+    cell_list_t *next_cell_list;
     int error_check;
-    int current = 0;
-    int destination = current + 1;
+
+    vehicle_data_t *bus = (vehicle_data_t *)arg;
+    int current_idx = 0;
+    int destination_idx = current_idx + 1;
     cell_t initial_cell = get_cell(&bus->destinations[0]);
     position_t current_position = get_pos(initial_cell);
+
     bus->position.pos_x = current_position.pos_x;
     bus->position.pos_y = current_position.pos_y;
 
@@ -573,27 +604,82 @@ void* move_bus(void *arg) {
         pthread_mutex_unlock(&threadville_resources.mutex);
     }
 
+    pthread_t thread;
+    pthread_create(&thread, NULL, test_bus, bus);
+
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
                 errno, strerror(errno));
     }
 
-    while(bus->active){
-        cell_list = get_path(get_cell(&bus->destinations[current]), get_cell(&bus->destinations[destination]));
-        cell_node_t *current_cell = cell_list->cell_node;
-        if (cell_list->weight == INF){
-            printf("ERROR! NO HAY RUTA\n");
-            break;
-        }
-        while (current_cell != NULL){
-            // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cell->cell.row, current_cell->cell.column);
-            move(current_cell, bus, 20);
-            current_cell = current_cell->next;
-        }
-        current = (current + 1) % bus->destinations_num;
-        destination = (destination + 1) % bus->destinations_num;
-        sleep(STOP_TIME_SECS);
+    cell_list = get_path(get_cell(&bus->destinations[current_idx]), get_cell(&bus->destinations[destination_idx]));
+    if (cell_list->weight == INF){
+        printf("ERROR! NO HAY RUTA\n");
+        pthread_exit(NULL);
     }
+    current_destination = cell_list->cell_node;
+    next_destination = current_destination->next;
+    current_destination->is_stop = true;
+
+    pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+    [current_destination->cell.row][current_destination->cell.column]);
+    pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+    [next_destination->cell.row][next_destination->cell.column]);
+
+    while (current_destination != NULL){
+        if (!bus->active){
+            bus->position.pos_x = -100;
+            bus->position.pos_y = -100;
+            pthread_mutex_lock(&bus->mutex);
+            pthread_mutex_unlock(&bus->mutex);
+
+            pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+            [current_destination->cell.row][current_destination->cell.column]);
+            pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+            [current_destination->next->cell.row][current_destination->next->cell.column]);
+
+
+            current_destination = cell_list->cell_node;
+            current_position = get_pos(current_destination->cell);
+            current_destination = cell_list->cell_node;
+            bus->position.pos_x = current_position.pos_x;
+            bus->position.pos_y = current_position.pos_y;
+        }
+        if (current_destination->is_stop){
+            sleep(STOP_TIME_SECS);
+        }
+        current_cell = &current_destination->cell;
+        next_cell = &current_destination->next->cell;
+        next_destination = current_destination->next;
+
+        if (next_destination->next == NULL){
+            current_idx = (current_idx + 1) % bus->destinations_num;
+            destination_idx = (destination_idx + 1) % bus->destinations_num;
+            if (current_idx == 0 && destination_idx == 1) {
+                current_destination->next = cell_list->cell_node;
+                free(next_destination->next);
+                next_destination = current_destination->next;
+            } else {
+                next_cell_list = get_path(get_cell(&bus->destinations[current_idx]), get_cell(&bus->destinations[destination_idx]));
+                if (next_cell_list->weight == INF){
+                    printf("ERROR! NO HAY RUTA\n");
+                    pthread_exit(NULL);
+                }
+                next_destination->next = next_cell_list->cell_node->next;
+                next_destination->is_stop = true;
+                free(next_cell_list);
+                free(next_cell_list->cell_node);
+            }
+        }
+        after_next_destination = next_destination->next;
+        after_next_cell = &after_next_destination->cell;
+
+        move(current_cell, next_cell, after_next_cell, bus, 20);
+        current_destination = current_destination->next;
+
+
+    }
+
     pthread_exit(NULL);
 }
 
@@ -615,9 +701,18 @@ void new_car(vehicle_data_t *car) {
     car->thread = thread;
 }
 
+void disable_bus(vehicle_data_t *bus) {
+    pthread_mutex_lock(&bus->mutex);
+    bus->active = false;
+}
+
+void enable_bus(vehicle_data_t *bus) {
+    bus->active = true;
+    pthread_mutex_unlock(&bus->mutex);
+}
+
 void new_bus(vehicle_data_t *bus) {
     int error_check;
-    pthread_t thread;
     switch(bus->color){
         case RED:
             bus->destinations_num = RED_BUS_DESTINATIONS;
@@ -658,7 +753,13 @@ void new_bus(vehicle_data_t *bus) {
         default:
             ;
     }
-    error_check = pthread_create(&thread, NULL, move_bus, bus);
+    error_check = pthread_mutex_init(&bus->mutex, NULL);
+    if (error_check != 0) {
+        fprintf(stderr, "Error executing pthread_mutex_init. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+
+    error_check = pthread_create(&bus->thread, NULL, move_bus, bus);
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_create. (Errno %d: %s)\n",
                 errno, strerror(errno));
@@ -677,6 +778,9 @@ void new_ambulance(vehicle_data_t *ambulance) {
 
 
 void* load_matrix_data(void *arg) {
+    clock_t t;
+    clock_t t_total;
+    t_total = clock();
     int current_row;
     int current_column;
     int last_road_chunk;
@@ -783,6 +887,7 @@ void* load_matrix_data(void *arg) {
 
 
 
+    t = clock();
     // Solve Floyd algorithm
     for (int k = 0; k < NODES_NUM; k++)
         for (int i = 0; i < NODES_NUM; i++)
@@ -796,10 +901,19 @@ void* load_matrix_data(void *arg) {
                     threadville_resources.threadville_graph[i][j].index =
                             threadville_resources.threadville_graph[k][j].index;
     }
+    t = clock() - t;
+    double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
+    printf("Floyd took %f seconds to execute\n", time_taken);
+
     pthread_mutex_lock(&threadville_resources.mutex);
     pthread_cond_broadcast(&threadville_resources.init_thread_done);
     pthread_mutex_unlock(&threadville_resources.mutex);
     threadville_resources.init_done = true;
+
+
+    t_total = clock() - t_total;
+    time_taken = ((double)t_total)/CLOCKS_PER_SEC; // calculate the elapsed time
+    printf("The program took %f seconds to execute\n", time_taken);
     pthread_exit(NULL);
 }
 
@@ -829,11 +943,11 @@ void set_screen_position_data(screen_position_data_t screen_position_data){
 
     for (int row = 0; row < MATRIX_ROWS; row++){
         for (int column = 0; column < MATRIX_COLUMNS; column++){
-            ret = sem_init(&threadville_resources.threadville_matrix_mutexes[row][column], 1, 1);
-        }
-        if (ret != 0) {
-            fprintf(stderr, "Error executing sem_init. (Errno %d: %s)\n",
-                    errno, strerror(errno));
+            ret = pthread_mutex_init(&threadville_resources.threadville_matrix_mutexes[row][column], NULL);
+            if (ret != 0) {
+                fprintf(stderr, "Error executing sem_init. (Errno %d: %s)\n",
+                        errno, strerror(errno));
+            }
         }
     }
 }

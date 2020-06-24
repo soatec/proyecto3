@@ -22,6 +22,7 @@ typedef struct vehicle_list_t {
  * Linked list of cells
  */
 typedef struct cell_node_t {
+    bool                is_stop;
     cell_t              cell;
     struct cell_node_t *next;
 } cell_node_t;
