@@ -30,7 +30,6 @@ SDL_Surface *city_background;
 SDL_Surface *vehicle_images[3][10][4];
 
 //==================
-
 void create_new_ambulance(){
     vehicle_data_t *ambulance;
     ambulance = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
@@ -38,7 +37,7 @@ void create_new_ambulance(){
     ambulance->position.pos_y = 550;
     // TODO: Llenar la estructura vehicle_data_t con los datos de la nueva ambulancia
     add_vehicle_to_list(ambulances, ambulance);
-    new_ambulance(ambulance);
+    new_vehicle(ambulance);
 }
 
 void create_new_bus(color_e_t color){
@@ -48,19 +47,19 @@ void create_new_bus(color_e_t color){
     bus->color = color;
     bus->active = true;
     bus->direction = NORTH;
+    bus->id = color;
     buses[color] = bus;
-    new_bus(bus);
+    new_vehicle(bus);
 }
 
 void create_new_random_car(){
     vehicle_data_t *car;
     car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
     car->destinations_num = 0;
-    car->position.pos_x = 0;
-    car->position.pos_y = 0;
-    // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro
+    car->type = CAR;
+    car->active = true;
     add_vehicle_to_list(cars, car);
-    new_car(car);
+    new_vehicle(car);
 }
 
 void create_new_custom_car(){
@@ -68,7 +67,7 @@ void create_new_custom_car(){
     car = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
     // TODO: Llenar la estructura vehicle_data_t con los datos del nuevo carro dados por el usuario
     add_vehicle_to_list(cars, car);
-    new_car(car);
+    new_vehicle(car);
 }
 
 //==================
@@ -170,6 +169,7 @@ int initialize_ui() {
     // Init list of vehicles
     init_vehicle_list(cars);
     init_vehicle_list(ambulances);
+
     return 0;
 }
 
@@ -186,16 +186,16 @@ void update_vehicle_positions() {
     SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
     vehicle_node_t * current_vehicle = cars->vehicle_node;
     while (current_vehicle != NULL) {
-        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
-        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
-        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
+        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->image_position);
+        current_vehicle->vehicle->image_position.x = current_vehicle->vehicle->position.pos_x;
+        current_vehicle->vehicle->image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
     current_vehicle = ambulances->vehicle_node;
     while (current_vehicle != NULL) {
-        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
-        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
-        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
+        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->image_position);
+        current_vehicle->vehicle->image_position.x = current_vehicle->vehicle->position.pos_x;
+        current_vehicle->vehicle->image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
 
@@ -203,9 +203,9 @@ void update_vehicle_positions() {
         if (buses[bus] == NULL){
             continue;
         }
-        SDL_BlitSurface(get_vehicle_image(buses[bus]), NULL, main_window_surface, &buses[bus]->bus_image_position);
-        buses[bus]->bus_image_position.x = buses[bus]->position.pos_x;
-        buses[bus]->bus_image_position.y = buses[bus]->position.pos_y;
+        SDL_BlitSurface(get_vehicle_image(buses[bus]), NULL, main_window_surface, &buses[bus]->image_position);
+        buses[bus]->image_position.x = buses[bus]->position.pos_x;
+        buses[bus]->image_position.y = buses[bus]->position.pos_y;
     }
     SDL_UpdateWindowSurface(main_window);
 }
@@ -221,10 +221,27 @@ void core_loop() {
 
     create_new_bus(WHITE);
     create_new_bus(GRAY);
-    create_new_bus(BLACK);
-    create_new_bus(PINK);
-    create_new_bus(LIGHT_BLUE);
-    create_new_bus(ORANGE);
+    //create_new_bus(BLACK);
+    //create_new_bus(PINK);
+    //create_new_bus(LIGHT_BLUE);
+    //create_new_bus(ORANGE);
+    create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+    //create_new_random_car();
+
+
 
     while(keep_window_open)
     {

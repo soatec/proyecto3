@@ -39,7 +39,9 @@
 #define UPTOWN_MOST_SOUTHERN_ROW 13
 #define UNDERGROUND_MOST_NORTHERN_ROW 20
 
-#define STOP_TIME_SECS 5
+#define BUS_TIME_SECS 1
+#define CAR_TIME_SECS 1
+#define AMBULANCE_TIME_SECS 1
 
 // Enums
 
@@ -203,6 +205,15 @@ int buses_destinations_num[BUSES_NUM] = {
         PINK_BUS_DESTINATIONS,
         LIGHT_BLUE_BUS_DESTINATIONS,
         ORANGE_BUS_DESTINATIONS
+};
+
+color_e_t cars_color[CARS_COLORS] = {
+        RED,
+        BLUE,
+        GREEN,
+        BLACK,
+        WHITE,
+        YELLOW
 };
 
 cell_t stops[PATTERN_MAX][STOP_MAX] = {
@@ -410,8 +421,8 @@ void* bridge_timer(void *arg) {
           if (status) exit(EXIT_FAILURE);
         } else {
           while(bridge_data->cars_quantity > 0) {
-            printf("[Bridge] Direction will change to south, waiting for %d cars to exit\n",
-                   bridge_data->cars_quantity);
+            //printf("[Bridge] Direction will change to south, waiting for %d cars to exit\n",
+             //      bridge_data->cars_quantity);
             sleep(BRIDGE_TIMER_SLEEP_S);
           }
           bridge_data->timer_ctrl.direction = SOUTH;
@@ -427,8 +438,8 @@ void* bridge_timer(void *arg) {
           if (status) exit(EXIT_FAILURE);
         } else {
           while(bridge_data->cars_quantity > 0) {
-            printf("[Bridge] Direction will change to north, waiting for %d cars to exit\n",
-                   bridge_data->cars_quantity);
+            //printf("[Bridge] Direction will change to north, waiting for %d cars to exit\n",
+            //       bridge_data->cars_quantity);
             sleep(BRIDGE_TIMER_SLEEP_S);
           }
           bridge_data->timer_ctrl.direction = NORTH;
@@ -462,111 +473,12 @@ void* test_bus(void *arg) {
 
 }
 
-
-// PUBLIC FUNCTIONS
-void* test_move_vehicle(void *arg) {
-    vehicle_data_t *car        = (vehicle_data_t *)arg;
-    double mean                = 1 + rand() % 5;
-    double sleep_before_bridge = mean;
-    double sleep_after_bridge  = mean;
-    bridge_e_t bridge_id       = rand() % BRIDGE_MAX;
-    int status = 0;
-
-    car->direction = rand() % 2;
-
-    printf("[Car %d] sleeping for: %f seconds\n", car->id, sleep_before_bridge);
-
-    sleep(sleep_before_bridge);
-
-    printf("[Car %d] At the entrance of bridge: %d, direction: %d\n", car->id, bridge_id, car->direction);
-
-    switch (bridge_id) {
-      case JOE:
-      case LARRY:
-        status = external_bridge_enter(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "external_bridge_enter", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      case CURLY:
-      case SHEMP:
-        status = internal_bridge_enter(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "internal_bridge_enter", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      case MOE:
-        status = middle_bridge_enter(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "middle_bridge_enter", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      default:
-        fprintf(stderr, "[Car %d] Bridge identifier not supported %d\n", car->id, bridge_id);
-        exit(EXIT_FAILURE);
-    }
-
-    printf("[Car %d] sleeping for: %f seconds\n", car->id, sleep_after_bridge);
-
-    sleep(sleep_after_bridge);
-
-    printf("[Car %d] At the exit of bridge: %d, direction: %d\n", car->id, bridge_id, car->direction);
-
-    switch (bridge_id) {
-      case JOE:
-      case LARRY:
-        status = external_bridge_exit(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "external_bridge_exit", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      case CURLY:
-      case SHEMP:
-        status = internal_bridge_exit(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "internal_bridge_exit", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      case MOE:
-        status = middle_bridge_exit(car, bridge_id);
-        if (status) {
-          fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
-                  car->id, "middle_bridge_exit", status);
-          exit(EXIT_FAILURE);
-        }
-        break;
-      default:
-        fprintf(stderr, "[Car %d] Bridge identifier not supported %d\n", car->id, bridge_id);
-        exit(EXIT_FAILURE);
-    }
-
-    /*
-    while(true) {
-        car->position.pos_x++;
-        usleep(500000);
-        car->position.pos_y++;
-        usleep(800000);
-    }
-    */
-    pthread_exit(NULL);
-}
-
 position_t get_pos(cell_t cell){
     position_t position;
     position.pos_x = cell.column * threadville_resources.screen_position_data.height_car +
-            threadville_resources.screen_position_data.offset_x;
+                     threadville_resources.screen_position_data.offset_x;
     position.pos_y = cell.row * threadville_resources.screen_position_data.height_car +
-            threadville_resources.screen_position_data.offset_y;
+                     threadville_resources.screen_position_data.offset_y;
     switch (threadville_resources.cells_type[cell.row][cell.column]){
         case BRIDGE_CELL:
             position.pos_x += threadville_resources.screen_position_data.height_car / 2;
@@ -575,6 +487,106 @@ position_t get_pos(cell_t cell){
     }
     return position;
 }
+
+void enter_bridge(int bridge_id, vehicle_data_t *vehicle){
+    int status = 0;
+    //printf("[Car %d] At the entrance of bridge: %d, direction: %d\n", vehicle->id, bridge_id, vehicle->direction);
+    switch (bridge_id) {
+        case JOE:
+        case LARRY:
+            status = external_bridge_enter(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "external_bridge_enter", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case CURLY:
+        case SHEMP:
+            status = internal_bridge_enter(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "internal_bridge_enter", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case MOE:
+            status = middle_bridge_enter(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "middle_bridge_enter", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        default:
+            fprintf(stderr, "[Car %d] Bridge identifier not supported %d\n", vehicle->id, bridge_id);
+            exit(EXIT_FAILURE);
+    }
+}
+
+
+void exit_bridge(int bridge_id, vehicle_data_t *vehicle){
+    int status = 0;
+    printf("[Car %d] At the exit of bridge: %d, direction: %d\n", vehicle->id, bridge_id, vehicle->direction);
+    switch (bridge_id) {
+        case JOE:
+        case LARRY:
+            status = external_bridge_exit(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "external_bridge_exit", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case CURLY:
+        case SHEMP:
+            status = internal_bridge_exit(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "internal_bridge_exit", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        case MOE:
+            status = middle_bridge_exit(vehicle, bridge_id);
+            if (status) {
+                fprintf(stderr, "[Car %d] Error at function: %s, status: %d\n",
+                        vehicle->id, "middle_bridge_exit", status);
+                exit(EXIT_FAILURE);
+            }
+            break;
+        default:
+            fprintf(stderr, "[Car %d] Bridge identifier not supported %d\n", vehicle->id, bridge_id);
+            exit(EXIT_FAILURE);
+    }
+}
+
+int check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_data_t *vehicle){
+    int bridge_id;
+    vehicle->direction = NORTH;
+    if (dest_cell.row > current_cell.row){
+        vehicle->direction = SOUTH;
+    }
+    if (dest_cell.row == 20){
+        printf("HOLA\n");
+    }
+    bridge_id = (dest_cell.column - SEPARATION_BETWEEN_BRIDGES + 1) / SEPARATION_BETWEEN_BRIDGES;
+    if ((dest_cell.row == first_bridge.row && vehicle->direction == SOUTH) ||
+        (dest_cell.row == first_bridge.row + BRIDGE_SIZE - 1 && vehicle->direction == NORTH)){
+        printf("%d enters bridge before moving to (%d, %d)\n", vehicle->id, dest_cell.row, dest_cell.column);
+        enter_bridge(bridge_id, vehicle);
+    } else if ((dest_cell.row == first_bridge.row - 1 && vehicle->direction == NORTH) ||
+               (dest_cell.row == first_bridge.row + BRIDGE_SIZE && vehicle->direction == SOUTH)) {
+        printf("%d exits bridge before moving to (%d, %d)\n", vehicle->id, dest_cell.row, dest_cell.column);
+        exit_bridge(bridge_id, vehicle);
+    }
+    return bridge_id;
+}
+
+// PUBLIC FUNCTIONS
+
+
+
 
 void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *car, int micro_seconds){
     position_t position = get_pos(*current_cell);
@@ -586,8 +598,6 @@ void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *car, int micr
     position = get_pos(*next_cell);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
-
-
 
     while(current_x != final_x || current_y != final_y) {
         if (current_x < final_x) {
@@ -606,119 +616,162 @@ void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *car, int micr
     }
 }
 
+void disable_vehicle(vehicle_data_t *vehicle, cell_node_t **current_cell_nodes,
+        cell_list_t **current_lists, int needed_cells) {
+    position_t current_position;
+    // Hide vehicle
+    vehicle->position.pos_x = -100;
+    vehicle->position.pos_y = -100;
+
+    // Wait until it's re-enabled
+    pthread_mutex_lock(&vehicle->mutex);
+    pthread_mutex_unlock(&vehicle->mutex);
+
+    // Unlock old mutexes
+    pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+    [current_cell_nodes[0]->cell.row][current_cell_nodes[0]->cell.column]);
+    pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+    [current_cell_nodes[0]->next->cell.row][current_cell_nodes[0]->next->cell.column]);
+
+    // Set current position to the first stop
+    current_cell_nodes[0] = current_lists[0]->cell_node;
+    current_position = get_pos(current_cell_nodes[0]->cell);
+    vehicle->position.pos_x = current_position.pos_x;
+    vehicle->position.pos_y = current_position.pos_y;
+
+    // Lock initial mutexes
+    current_cell_nodes[1] = current_cell_nodes[0]->next;
+    for (int i = 0; i < needed_cells - 1; i++){
+        pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+        [current_cell_nodes[i]->cell.row][current_cell_nodes[i]->cell.column]);
+    }
+}
+
+void can_move(vehicle_data_t *vehicle, cell_list_t **current_lists, cell_node_t **current_cell_nodes,
+        cell_t **current_cells, int *current_idx, int *destination_idx, int needed_cells){
+    current_cell_nodes[1] = current_cell_nodes[0]->next;
+    if (current_cell_nodes[1]->next == NULL){
+        *current_idx = (*current_idx + 1) % vehicle->destinations_num;
+        *destination_idx = (*destination_idx + 1) % vehicle->destinations_num;
+        if (*current_idx == 0 && *destination_idx == 1) {
+            current_cell_nodes[0]->next = current_lists[0]->cell_node;
+            free(current_cell_nodes[1]->next);
+            current_cell_nodes[1] = current_cell_nodes[0]->next;
+        } else {
+            current_lists[1] = get_path(get_cell(&vehicle->destinations[*current_idx]),
+                    get_cell(&vehicle->destinations[*destination_idx]));
+            if (current_lists[1]->weight == INF){
+                printf("ERROR! NO HAY RUTA ENTRE (%d, %d) y (%d, %d)\n",
+                       vehicle->destinations[*current_idx].destination.stop.block,
+                       vehicle->destinations[*current_idx].destination.stop.stop,
+                       vehicle->destinations[*destination_idx].destination.stop.block,
+                       vehicle->destinations[*destination_idx].destination.stop.stop);
+                pthread_exit(NULL);
+            }
+            current_cell_nodes[1]->next = current_lists[1]->cell_node->next;
+            current_cell_nodes[1]->is_stop = true;
+            free(current_lists[1]);
+            free(current_lists[1]->cell_node);
+        }
+    }
+    current_cell_nodes[3] = current_cell_nodes[1]->next;
+    current_cells[2] = &current_cell_nodes[3]->cell;
+    check_bridge_interaction(*current_cells[0], *current_cells[needed_cells-1], vehicle);
+}
 
 
 void* move_vehicle(void *arg) {
-    vehicle_data_t *bus = (vehicle_data_t *)arg;
-    int needed_cells = 2;
-    if (bus->type == BUS){
+    int error_check;
+    int time_to_wait;
+    int current_idx = 0;
+    int destination_idx = current_idx + 1;
+    vehicle_data_t *vehicle = (vehicle_data_t *)arg;
+    int needed_cells;
+    if (vehicle->type == BUS){
         needed_cells = 3;
+        time_to_wait = BUS_TIME_SECS;
+    } else if (vehicle->type == CAR){
+        needed_cells = 2;
+        time_to_wait = CAR_TIME_SECS;
+    } else {
+        time_to_wait = AMBULANCE_TIME_SECS;
+        needed_cells = 2;
     }
     cell_t *current_cells[needed_cells];
     cell_node_t *current_cell_nodes[needed_cells];
-
-
-
     cell_list_t *current_lists[2];
 
-    int error_check;
-    int current_idx = 0;
-    int destination_idx = current_idx + 1;
-
-
-    cell_t initial_cell = get_cell(&bus->destinations[0]);
+    cell_t initial_cell = get_cell(&vehicle->destinations[0]);
     position_t current_position = get_pos(initial_cell);
 
-    bus->position.pos_x = current_position.pos_x;
-    bus->position.pos_y = current_position.pos_y;
+    // Set position before waitinf for init done
+    vehicle->position.pos_x = current_position.pos_x;
+    vehicle->position.pos_y = current_position.pos_y;
 
     if (!threadville_resources.init_done) {
-        pthread_mutex_lock(&threadville_resources.mutex);
+        error_check = pthread_mutex_lock(&threadville_resources.mutex);
+        if (error_check != 0) {
+            fprintf(stderr, "Error executing pthread_mutex_lock. (Errno %d: %s)\n",
+                    errno, strerror(errno));
+        }
         error_check = pthread_cond_wait(&threadville_resources.init_thread_done, &threadville_resources.mutex);
-        pthread_mutex_unlock(&threadville_resources.mutex);
-    }
-    if (error_check != 0) {
-        fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
-                errno, strerror(errno));
+        if (error_check != 0) {
+            fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
+                    errno, strerror(errno));
+        }
+        error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+        if (error_check != 0) {
+            fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+                    errno, strerror(errno));
+        }
     }
 
-    current_lists[0] = get_path(get_cell(&bus->destinations[current_idx]), get_cell(&bus->destinations[destination_idx]));
+    //pthread_t thread;
+    //pthread_create(&thread, NULL, test_bus, vehicle);
+
+
+    current_lists[0] = get_path(get_cell(&vehicle->destinations[current_idx]), get_cell(&vehicle->destinations[destination_idx]));
     if (current_lists[0]->weight == INF){
-        printf("ERROR! NO HAY RUTA\n");
+        printf("ERROR! NO HAY RUTA ENTRE (%d, %d) y (%d, %d)\n",
+                vehicle->destinations[current_idx].destination.stop.block,
+                vehicle->destinations[current_idx].destination.stop.stop,
+               vehicle->destinations[destination_idx].destination.stop.block,
+               vehicle->destinations[destination_idx].destination.stop.stop);
         pthread_exit(NULL);
     }
     current_cell_nodes[0] = current_lists[0]->cell_node;
     current_cell_nodes[0]->is_stop = true;
     current_cell_nodes[1] = current_cell_nodes[0]->next;
 
-    pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-    [current_cell_nodes[0]->cell.row][current_cell_nodes[0]->cell.column]);
-    pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-    [current_cell_nodes[1]->cell.row][current_cell_nodes[1]->cell.column]);
+    for (int i = 0; i < needed_cells - 1; i++){
+        printf("%d blocking: (%d, %d) \n", vehicle->id, current_cell_nodes[i]->cell.row, current_cell_nodes[i]->cell.column);
+        pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
+        [current_cell_nodes[i]->cell.row][current_cell_nodes[i]->cell.column]);
+    }
 
     while (current_cell_nodes[0] != NULL){
-        if (!bus->active){
-            // Hide bus
-            bus->position.pos_x = -100;
-            bus->position.pos_y = -100;
-
-            // Wait until it's re-enabled
-            pthread_mutex_lock(&bus->mutex);
-            pthread_mutex_unlock(&bus->mutex);
-
-            // Unlock old mutexes
-            pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
-            [current_cell_nodes[0]->cell.row][current_cell_nodes[0]->cell.column]);
-            pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
-            [current_cell_nodes[0]->next->cell.row][current_cell_nodes[0]->next->cell.column]);
-
-            // Set current position to the first stop
-            current_cell_nodes[0] = current_lists[0]->cell_node;
-            current_position = get_pos(current_cell_nodes[0]->cell);
-            bus->position.pos_x = current_position.pos_x;
-            bus->position.pos_y = current_position.pos_y;
-            pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-
-            // Lock initial mutexes
-            [current_cell_nodes[0]->cell.row][current_cell_nodes[0]->cell.column]);
-            pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-            [current_cell_nodes[0]->next->cell.row][current_cell_nodes[0]->next->cell.column]);
+        if (!vehicle->active){
+            disable_vehicle(vehicle, current_cell_nodes, current_lists, needed_cells);
         }
+
         if (current_cell_nodes[0]->is_stop){
-            sleep(STOP_TIME_SECS);
+            sleep(time_to_wait);
         }
         current_cells[0] = &current_cell_nodes[0]->cell;
         current_cells[1] = &current_cell_nodes[0]->next->cell;
-        current_cell_nodes[1] = current_cell_nodes[0]->next;
 
-        if (current_cell_nodes[1]->next == NULL){
-            current_idx = (current_idx + 1) % bus->destinations_num;
-            destination_idx = (destination_idx + 1) % bus->destinations_num;
-            if (current_idx == 0 && destination_idx == 1) {
-                current_cell_nodes[0]->next = current_lists[0]->cell_node;
-                free(current_cell_nodes[1]->next);
-                current_cell_nodes[1] = current_cell_nodes[0]->next;
-            } else {
-                current_lists[1] = get_path(get_cell(&bus->destinations[current_idx]), get_cell(&bus->destinations[destination_idx]));
-                if (current_lists[1]->weight == INF){
-                    printf("ERROR! NO HAY RUTA\n");
-                    pthread_exit(NULL);
-                }
-                current_cell_nodes[1]->next = current_lists[1]->cell_node->next;
-                current_cell_nodes[1]->is_stop = true;
-                free(current_lists[1]);
-                free(current_lists[1]->cell_node);
-            }
-        }
-        current_cell_nodes[3] = current_cell_nodes[1]->next;
-        current_cells[2] = &current_cell_nodes[3]->cell;
 
+        can_move(vehicle, current_lists, current_cell_nodes, current_cells, &current_idx, &destination_idx, needed_cells);
+
+        printf("%d blocking: (%d, %d) \n", vehicle->id, current_cells[needed_cells - 1]->row, current_cells[needed_cells - 1]->column);
+        printf("%d unblocking: (%d, %d) \n", vehicle->id, current_cells[0]->row, current_cells[0]->column);
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-        [current_cells[2]->row][current_cells[2]->column]);
+        [current_cells[needed_cells - 1]->row][current_cells[needed_cells - 1]->column]);
         pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
         [current_cells[0]->row][current_cells[0]->column]);
 
-        move(current_cells[0], current_cells[1], bus, 20);
+        // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
+        move(current_cells[0], current_cells[1], vehicle, 2);
         current_cell_nodes[0] = current_cell_nodes[0]->next;
     }
 
@@ -726,17 +779,17 @@ void* move_vehicle(void *arg) {
 }
 
 void get_random_destinations(vehicle_data_t *vehicle, int destinations_num){
-    destination_t destination;
     if (destinations_num == -1) {
-        destinations_num = get_random(0, 8);
+        destinations_num = get_random(1, 10);
     }
     vehicle->destinations = malloc(sizeof(destination_t) * destinations_num);
-    vehicle->destinations_num = destinations_num;
-    for (int i = 0; i < destinations_num;){
-        destination.destination_type = STOP;
-        destination.destination.stop.stop = get_random(0, STOP_MAX - 1);
-        destination.destination.stop.block = get_random(0, BLOCK_MAX - 1);
-        vehicle->destinations[i] = destination;
+    vehicle->destinations_num = 2;
+    for (int i = 0; i < destinations_num; i++){
+
+        vehicle->destinations[i].destination_type = STOP;
+        vehicle->destinations[i].destination.stop.block = get_random(0, BLOCK_MAX - 1);
+        vehicle->destinations[i].destination.stop.stop = get_random(0, STOP_MAX - 1);
+        printf("BLOQUE: %d. PARADA: %d\n", vehicle->destinations[i].destination.stop.block, vehicle->destinations[i].destination.stop.stop);
     }
 }
 
@@ -749,7 +802,7 @@ void new_car(vehicle_data_t *car) {
     // Initialize vehicule type
     car->type = CAR;
 
-    error_check = pthread_create(&thread, NULL, test_move_vehicle, car);
+    error_check = pthread_create(&thread, NULL, move_vehicle, car);
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_create. (Errno %d: %s)\n",
                 errno, strerror(errno));
@@ -768,7 +821,7 @@ void enable_bus(vehicle_data_t *bus) {
     pthread_mutex_unlock(&bus->mutex);
 }
 
-void new_bus(vehicle_data_t *vehicle) {
+void new_vehicle(vehicle_data_t *vehicle) {
     int error_check;
     switch (vehicle->type){
         case BUS:
@@ -779,6 +832,8 @@ void new_bus(vehicle_data_t *vehicle) {
             if (vehicle->destinations_num == 0){
                 get_random_destinations(vehicle, -1);
             }
+            vehicle->color = cars_color[get_random(0, CARS_COLORS - 1)];
+            vehicle->direction = 1;
             break;
         case AMBULANCE:
             get_random_destinations(vehicle, 2);
@@ -797,17 +852,6 @@ void new_bus(vehicle_data_t *vehicle) {
     }
 }
 
-void new_ambulance(vehicle_data_t *ambulance) {
-    int error_check;
-    pthread_t thread;
-    error_check = pthread_create(&thread, NULL, test_move_vehicle, ambulance);
-    if (error_check != 0) {
-        fprintf(stderr, "Error executing pthread_create. (Errno %d: %s)\n",
-                errno, strerror(errno));
-    }
-}
-
-
 void* load_matrix_data(void *arg) {
     clock_t t;
     clock_t t_total;
@@ -817,6 +861,7 @@ void* load_matrix_data(void *arg) {
     int last_road_chunk;
     int first_bridge_chunk;
 
+    srand((unsigned int)time(NULL));
     for (int row = 0; row < NODES_NUM; row++){
         for (int column = 0; column < NODES_NUM; column++){
             threadville_resources.threadville_graph[row][column].weight = INF;
@@ -974,6 +1019,11 @@ void set_screen_position_data(screen_position_data_t screen_position_data){
     int error_check;
     int ret;
     pthread_t thread;
+
+    error_check = initialize_bridges(1,
+                                5,
+                                5);
+    printf("STATUS: initialize_bridges %d\n", error_check);
 
     error_check = pthread_create(&thread, NULL, load_matrix_data, NULL);
     if (error_check != 0) {
@@ -1199,7 +1249,7 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_lock(&bridges_data[bridge_id].mutex);
 
   switch (vehicle->direction) {
-    case NORTH:
+    case SOUTH:
       entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
       switch (vehicle->type) {
         case CAR:
@@ -1216,7 +1266,7 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       }
       cars_entrance = bridges_data[bridge_id].cars_north_entrance;
       break;
-    case SOUTH:
+    case NORTH:
       entrance_cond = &bridges_data[bridge_id].south_entrance_traffic_ctrl;
       switch (vehicle->type) {
         case CAR:
@@ -1267,10 +1317,10 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
     case CAR:
     case AMBULANCE:
       switch (vehicle->direction) {
-        case NORTH:
+        case SOUTH:
           bridges_data[bridge_id].cars_north_entrance -= 1;
           break;
-        case SOUTH:
+        case NORTH:
           bridges_data[bridge_id].cars_south_entrance -= 1;
           break;
         default:
@@ -1282,10 +1332,10 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       break;
     case BUS:
       switch (vehicle->direction) {
-        case NORTH:
+        case SOUTH:
           bridges_data[bridge_id].cars_north_entrance -= 2;
           break;
-        case SOUTH:
+        case NORTH:
           bridges_data[bridge_id].cars_south_entrance -= 2;
           break;
         default:
@@ -1330,7 +1380,7 @@ int external_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   }
 
   switch (vehicle->direction) {
-    case NORTH:
+    case SOUTH:
       if ((bridges_data[bridge_id].cars_quantity == 0) &&
           (bridges_data[bridge_id].cars_south_entrance > bridges_data[bridge_id].capacity)) {
         entrance_cond = &bridges_data[bridge_id].south_entrance_traffic_ctrl;
@@ -1339,7 +1389,7 @@ int external_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
         entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
       }
       break;
-    case SOUTH:
+    case NORTH:
       if ((bridges_data[bridge_id].cars_quantity == 0) &&
           (bridges_data[bridge_id].cars_north_entrance > bridges_data[bridge_id].capacity)) {
         entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
@@ -1374,10 +1424,10 @@ int internal_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_cond_t *entrance_cond;
 
   switch (vehicle->direction) {
-    case NORTH:
+    case SOUTH:
       entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
       break;
-    case SOUTH:
+    case NORTH:
       entrance_cond = &bridges_data[bridge_id].south_entrance_traffic_ctrl;
       break;
     default:
@@ -1447,11 +1497,11 @@ int middle_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_lock(&bridges_data[bridge_id].mutex);
 
   switch (vehicle->direction) {
-    case NORTH:
+    case SOUTH:
       entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
       bridges_data[bridge_id].cars_north_entrance += 1;
       break;
-    case SOUTH:
+    case NORTH:
       entrance_cond = &bridges_data[bridge_id].south_entrance_traffic_ctrl;
       bridges_data[bridge_id].cars_south_entrance += 1;
       break;
@@ -1508,7 +1558,7 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_lock(&bridges_data[bridge_id].mutex);
 
   switch (vehicle->direction) {
-    case NORTH:
+    case SOUTH:
       bridges_data[bridge_id].cars_north_entrance -= 1;
       if (bridges_data[bridge_id].cars_south_entrance > 0) {
         entrance_cond = &bridges_data[bridge_id].south_entrance_traffic_ctrl;
@@ -1516,7 +1566,7 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
         entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
       }
       break;
-    case SOUTH:
+    case NORTH:
       bridges_data[bridge_id].cars_south_entrance -= 1;
       if (bridges_data[bridge_id].cars_north_entrance > 0) {
         entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;

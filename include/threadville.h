@@ -4,25 +4,11 @@
 #include "threadville_types.h"
 
 /**
- * Creates a new car
+ * Creates a new vehicle
  *
- * @param [inout] car     is the car data
+ * @param [inout] vehicle     is the bus data
  */
-void new_car(vehicle_data_t *car);
-
-/**
- * Creates a new bus
- *
- * @param [inout] bus     is the bus data
- */
-void new_bus(vehicle_data_t *bus);
-
-/**
- * Creates a new ambulance
- *
- * @param [inout] ambulance     is the ambulance data
- */
-void new_ambulance(vehicle_data_t *ambulance);
+void new_vehicle(vehicle_data_t *vehicle);
 
 /**
  * Sets screen position data
