@@ -9,8 +9,12 @@
 // Defines
 
 #define WINDOW_TITLE "Adventures in Threadville"
-#define WINDOW_HEIGHT 720
-#define WINDOW_WIDTH 1280
+#define WINDOW_WIDTH 1160
+#define WINDOW_HEIGHT 680
+#define BACKGROUND "../resources/background.png"
+#define BUS_WHITE "../resources/bus_white.png"
+#define CAR_RED "../resources/car_red.png"
+#define AMBULANCE "../resources/ambulance.png"
 
 // Global variables
 vehicle_list_t *cars;
@@ -95,7 +99,7 @@ void print_sdl_error(int errno) {
 int initialize_ui() {
     screen_position_data_t screen_position_data;
     // TODO: Llenar la estructura screen_position_data con los datos de posiciones
-    screen_position_data.offset_x = 104;
+    screen_position_data.offset_x = 100;
     screen_position_data.offset_y = 0;
     screen_position_data.height_car = WINDOW_HEIGHT / 34;
 
@@ -126,10 +130,10 @@ int initialize_ui() {
         return -1;
     }
 
-    city_background = IMG_Load("../resources/background.jpg");
-    car_image = IMG_Load("../resources/car_red.png");
-    bus_image = IMG_Load("../resources/bus_white.png");
-    ambulance_image = IMG_Load("../resources/ambulance.png");
+    city_background = IMG_Load(BACKGROUND);
+    car_image = IMG_Load(CAR_RED);
+    bus_image = IMG_Load(BUS_WHITE);
+    ambulance_image = IMG_Load(AMBULANCE);
 
 
     // Init structures of lists
