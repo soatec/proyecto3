@@ -11,10 +11,8 @@
 #define WINDOW_TITLE "Adventures in Threadville"
 #define WINDOW_WIDTH 1160
 #define WINDOW_HEIGHT 680
+#define RESOURCES_DIR "../resources/"
 #define BACKGROUND "../resources/background.png"
-#define BUS_WHITE "../resources/bus_white.png"
-#define CAR_RED "../resources/car_red.png"
-#define AMBULANCE "../resources/ambulance.png"
 
 // Global variables
 vehicle_list_t *cars;
@@ -26,11 +24,7 @@ SDL_Surface *main_window_surface;
 SDL_Event window_event;
 
 SDL_Surface *city_background;
-SDL_Surface *car_image;
-SDL_Rect car_image_position;
-SDL_Surface *bus_image;
-SDL_Surface *ambulance_image;
-SDL_Rect ambulance_image_position;
+SDL_Surface *vehicle_images[3][10][4];
 
 //==================
 
@@ -50,6 +44,7 @@ void create_new_bus(color_e_t color){
     bus->type = BUS;
     bus->color = color;
     bus->active = true;
+    bus->direction = NORTH;
     buses[color] = bus;
     new_bus(bus);
 }
@@ -98,7 +93,6 @@ void print_sdl_error(int errno) {
 
 int initialize_ui() {
     screen_position_data_t screen_position_data;
-    // TODO: Llenar la estructura screen_position_data con los datos de posiciones
     screen_position_data.offset_x = 100;
     screen_position_data.offset_y = 0;
     screen_position_data.height_car = WINDOW_HEIGHT / 34;
@@ -131,9 +125,7 @@ int initialize_ui() {
     }
 
     city_background = IMG_Load(BACKGROUND);
-    car_image = IMG_Load(CAR_RED);
-    bus_image = IMG_Load(BUS_WHITE);
-    ambulance_image = IMG_Load(AMBULANCE);
+    load_vehicle_images();
 
 
     // Init structures of lists
@@ -148,9 +140,7 @@ int initialize_ui() {
 
 void destroy_ui() {
     printf("%s\n", "Closing app...");
-    SDL_FreeSurface(ambulance_image);
-    SDL_FreeSurface(bus_image);
-    SDL_FreeSurface(car_image);
+    free_vehicle_images();
     SDL_FreeSurface(city_background);
     SDL_FreeSurface(main_window_surface);
     SDL_DestroyWindow(main_window);
@@ -161,16 +151,16 @@ void update_vehicle_positions() {
     SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
     vehicle_node_t * current_vehicle = cars->vehicle_node;
     while (current_vehicle != NULL) {
-        SDL_BlitSurface(car_image, NULL, main_window_surface, &car_image_position);
-        car_image_position.x = current_vehicle->vehicle->position.pos_x;
-        car_image_position.y = current_vehicle->vehicle->position.pos_y;
+        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
+        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
+        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
     current_vehicle = ambulances->vehicle_node;
     while (current_vehicle != NULL) {
-        SDL_BlitSurface(ambulance_image, NULL, main_window_surface, &ambulance_image_position);
-        ambulance_image_position.x = current_vehicle->vehicle->position.pos_x;
-        ambulance_image_position.y = current_vehicle->vehicle->position.pos_y;
+        SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->bus_image_position);
+        current_vehicle->vehicle->bus_image_position.x = current_vehicle->vehicle->position.pos_x;
+        current_vehicle->vehicle->bus_image_position.y = current_vehicle->vehicle->position.pos_y;
         current_vehicle = current_vehicle->next;
     }
 
@@ -178,7 +168,7 @@ void update_vehicle_positions() {
         if (buses[bus] == NULL){
             continue;
         }
-        SDL_BlitSurface(bus_image, NULL, main_window_surface, &buses[bus]->bus_image_position);
+        SDL_BlitSurface(get_vehicle_image(buses[bus]), NULL, main_window_surface, &buses[bus]->bus_image_position);
         buses[bus]->bus_image_position.x = buses[bus]->position.pos_x;
         buses[bus]->bus_image_position.y = buses[bus]->position.pos_y;
     }
@@ -214,5 +204,43 @@ void core_loop() {
         }
         update_vehicle_positions();
 
+    }
+}
+
+SDL_Surface* get_vehicle_image(vehicle_data_t *vehicle) {
+    return vehicle_images[vehicle->type][vehicle->color][vehicle->direction];
+}
+
+void load_vehicle_images() {
+    char asset_address[21];
+    for (vehicule_type_e_t v=BUS; v<=AMBULANCE; v++) {
+        for (color_e_t c=RED; c<=YELLOW; c++) {
+            if (v==BUS && c==YELLOW) break; //Bus has no YELLOW
+            if (v==CAR && (c==GRAY || c==PINK || c==LIGHT_BLUE || c==ORANGE)) {
+                //Not valid colors for CAR
+            } else {
+                for (direction_e_t d=NORTH; d<=WEST; d++) {
+                    snprintf(asset_address, 21, "%s%u%u%u.png", RESOURCES_DIR, v, c, d);
+                    vehicle_images[v][c][d] = IMG_Load(asset_address);
+                }
+            }
+            if (v==AMBULANCE) break; //Ambulance has no colors, so map directions to RED
+        }
+    }
+}
+
+void free_vehicle_images() {
+    for (vehicule_type_e_t v=BUS; v<=AMBULANCE; v++) {
+        for (color_e_t c=RED; c<=YELLOW; c++) {
+            if (v==BUS && c==YELLOW) break; //Bus has no YELLOW
+            if (v==CAR && (c==GRAY || c==PINK || c==LIGHT_BLUE || c==ORANGE)) {
+                //Not valid colors for CAR
+            } else {
+                for (direction_e_t d=NORTH; d<=WEST; d++) {
+                    SDL_FreeSurface(vehicle_images[v][c][d]);
+                }
+            }
+            if (v==AMBULANCE) break; //Ambulance has no colors, so map directions to RED
+        }
     }
 }
