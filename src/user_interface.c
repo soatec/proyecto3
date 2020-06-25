@@ -5,7 +5,7 @@
 #include "utils.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "kiss_sdl.h"
+#include "kiss_sdl/kiss_sdl.h"
 
  //sudo apt-get install libsdl2-ttf-dev
 
@@ -176,7 +176,6 @@ int initialize_ui() {
         print_sdl_error(2);
         return -1;
     }
-<<<<<<< HEAD
 
     city_background = IMG_Load(BACKGROUND);
     light_red = IMG_Load(LIGHT_RED);
