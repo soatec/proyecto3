@@ -47,9 +47,13 @@ void add_cell_to_list(cell_list_t *cell_list, cell_t cell){
     current_node->next = NULL;
 }
 
-double exponential_random(double mean)
-{
-  double uniform;
-  uniform = (rand() + 1) / (RAND_MAX + 2.0);	//Number in ]0,1[
-  return -log(1-uniform) * mean;	//Inversion method
+double exponential_random(double mean) {
+    double uniform;
+    uniform = (rand() + 1) / (RAND_MAX + 2.0);	//Number in ]0,1[
+    return -log(1-uniform) * mean;	//Inversion method
+}
+
+int get_random(int lower, int upper) {
+    int num = (rand() % (upper - lower + 1)) + lower;
+    return num;
 }
