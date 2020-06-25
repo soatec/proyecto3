@@ -43,6 +43,7 @@ void create_new_ambulance(){
 void create_new_bus(color_e_t color){
     vehicle_data_t *bus;
     bus = malloc(sizeof(vehicle_data_t));
+    bus->type = BUS;
     bus->color = color;
     bus->active = true;
     buses[color] = bus;

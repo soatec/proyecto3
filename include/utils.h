@@ -72,4 +72,12 @@ void add_cell_to_list(cell_list_t *cell_list, cell_t cell);
  */
 double exponential_random(double mean);
 
+/**
+ *
+ * @param lower
+ * @param upper
+ * @return
+ */
+int get_random(int lower, int upper);
+
 #endif //PROYECTO3_UTILS_H
