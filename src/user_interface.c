@@ -5,6 +5,9 @@
 #include "utils.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
+#include "kiss_sdl.h"
+
+ //sudo apt-get install libsdl2-ttf-dev
 
 // Defines
 
@@ -90,6 +93,29 @@ void print_sdl_error(int errno) {
             break;
     }
 }
+void button_event(kiss_button *button, SDL_Event *e, int *draw,
+                  int *quit)
+{
+    if (kiss_button_event(button, e, draw)) *quit = 1;
+}
+
+int create_ui_buttons(SDL_Window *window){
+    SDL_Renderer *renderer;
+
+    renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Rect rect1;
+    rect1.x = 50;
+    rect1.y = 50;
+    rect1.w = 200;
+    rect1.h = 32;
+    SDL_RenderDrawRect(renderer, &rect1);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // the rect color (solid red)
+    SDL_RenderFillRect(renderer, &rect1);
+    SDL_RenderPresent(renderer); // copy to screen
+
+
+    return 0;
+}
 
 int initialize_ui() {
     screen_position_data_t screen_position_data;
@@ -112,7 +138,7 @@ int initialize_ui() {
          return -1;
     }
 
-    main_window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, WINDOW_WIDTH, WINDOW_HEIGHT, 0);
+    main_window = SDL_CreateWindow(WINDOW_TITLE, SDL_WINDOWPOS_CENTERED,SDL_WINDOWPOS_CENTERED , WINDOW_WIDTH, WINDOW_HEIGHT, 0);
     if(!main_window) {
         print_sdl_error(1);
         return -1;
@@ -123,9 +149,17 @@ int initialize_ui() {
         print_sdl_error(2);
         return -1;
     }
+<<<<<<< HEAD
 
     city_background = IMG_Load(BACKGROUND);
     load_vehicle_images();
+=======
+    create_ui_buttons(main_window);
+    city_background = IMG_Load("../resources/background.jpg");
+    car_image = IMG_Load("../resources/car_red.png");
+    bus_image = IMG_Load("../resources/bus_white.png");
+    ambulance_image = IMG_Load("../resources/ambulance.png");
+>>>>>>> uibuttons
 
 
     // Init structures of lists

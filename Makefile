@@ -6,8 +6,8 @@ BUILD_DIR   := ./build
 TEST_DIR    := ./test
 
 CC        := gcc
-CFLAGS    := -Wall
-LDFLAGS   := -lm -lpthread `sdl2-config --libs --cflags` -lSDL2_image
+CFLAGS    := -Wall -c
+LDFLAGS   := -lm -lpthread `sdl2-config --libs --cflags` -lSDL2 -lSDL2_image -lSDL2_ttf
 INC_FLAGS := -I$(INCLUDE_DIR)
 
 SOURCES 		 = $(wildcard $(SOURCE_DIR)/*.c)
