@@ -8,6 +8,7 @@
 // Defines
 
 #define BUSES_NUM 9
+#define CARS_COLORS 6
 
 // Enums
 
@@ -135,7 +136,8 @@ typedef enum {
     PINK,
     LIGHT_BLUE,
     ORANGE,
-    YELLOW
+    YELLOW,
+    COLOR_MAX
 } color_e_t;
 
 /**
@@ -200,7 +202,7 @@ typedef struct vehicle_data_t {
     int               id;
     vehicule_type_e_t type;
     bool              active;
-    SDL_Rect          bus_image_position;
+    SDL_Rect          image_position;
     position_t        position;
     direction_e_t     direction;
     color_e_t         color;
