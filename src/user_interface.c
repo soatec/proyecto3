@@ -5,7 +5,7 @@
 #include "utils.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "kiss_sdl/kiss_sdl.h"
+#include "kiss_sdl.h"
 
  //sudo apt-get install libsdl2-ttf-dev
 
@@ -128,6 +128,19 @@ int create_ui_buttons(){
 
     SDL_RenderPresent(renderer);
 
+/*
+    renderer = SDL_CreateRenderer(window, -1, 0);
+    SDL_Rect rect1;
+    rect1.x = 50;
+    rect1.y = 50;
+    rect1.w = 200;
+    rect1.h = 32;
+    SDL_RenderDrawRect(renderer, &rect1);
+    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // the rect color (solid red)
+    SDL_RenderFillRect(renderer, &rect1);
+    SDL_RenderPresent(renderer); // copy to screen
+*/
+
     return 0;
 }
 
@@ -163,6 +176,7 @@ int initialize_ui() {
         print_sdl_error(2);
         return -1;
     }
+<<<<<<< HEAD
 
     city_background = IMG_Load(BACKGROUND);
     light_red = IMG_Load(LIGHT_RED);
@@ -176,6 +190,7 @@ int initialize_ui() {
     shemp_up_pos.y = 280;
     shemp_down_pos.x = 760;
     shemp_down_pos.y = 380;
+    create_ui_buttons(main_window);
 
     create_ui_buttons();
 
