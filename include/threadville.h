@@ -2,6 +2,7 @@
 #define PROYECTO3_THREADVILLE_H
 
 #include "threadville_types.h"
+#include "user_interface.h"
 
 /**
  * Creates a new vehicle
@@ -108,5 +109,8 @@ void disable_bus(vehicle_data_t *bus);
  * @param bus
  */
 void enable_bus(vehicle_data_t *bus);
+
+
+void* plan_reparations(void *arg);
 
 #endif //PROYECTO3_THREADVILLE_H

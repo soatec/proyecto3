@@ -288,6 +288,10 @@ cell_t first_bridge = {14, 7};
 
 threadville_resources_t threadville_resources;
 
+graph_node_t temp_graph[NODES_NUM][NODES_NUM];
+graph_node_t previous_connections_row[NODES_NUM];
+graph_node_t previous_connections_column[NODES_NUM];
+
 // Private functions
 
 cell_t get_cell(destination_t *destination){
@@ -377,6 +381,20 @@ cell_list_t *get_path(cell_t actual, cell_t destination) {
     init_cell_list(cell_list, threadville_resources.threadville_graph[i][j].weight);
     get_recursive_path(cell_list, i, j);
     return cell_list;
+}
+
+/**
+ * Copies an existing graph into another existing graph
+ *
+ * @param og_graph the original graph
+ * @param copy_graph the graph to be updated
+ */
+void copy_graph(graph_node_t og_graph[NODES_NUM][NODES_NUM], graph_node_t copy_graph[NODES_NUM][NODES_NUM]){
+  for(int i = 0; i < NODES_NUM ; i++){
+    for(int j = 0; j < NODES_NUM ; j++){
+      copy_graph[i][j] = og_graph[i][j];
+    }
+  }
 }
 
 // ENUMS AND STRUCTS
@@ -1177,6 +1195,7 @@ void* load_matrix_data(void *arg) {
     int current_column;
     int last_road_chunk;
     int first_bridge_chunk;
+    repaired_index = -1;
 
     srand((unsigned int)time(NULL));
     for (int row = 0; row < NODES_NUM; row++){
@@ -1518,6 +1537,8 @@ void* load_matrix_data(void *arg) {
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
     printf("Floyd took %f seconds to execute\n", time_taken);
+
+    copy_graph(threadville_resources.threadville_graph, temp_graph);
 
     pthread_mutex_lock(&threadville_resources.mutex);
     pthread_cond_broadcast(&threadville_resources.init_thread_done);
@@ -2124,4 +2145,151 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
   return status;
+}
+
+void disable_cell(int index){
+  for(int i = 0; i < NODES_NUM; i++){
+    if(index != i) {
+      temp_graph[index][i].weight = INF;
+      temp_graph[i][index].weight = INF;
+    }
+  }
+}
+
+void recalculate_weight(){
+  // Solve Floyd algorithm
+  for (int k = 0; k < NODES_NUM; k++)
+          for (int i = 0; i < NODES_NUM; i++)
+              for (int j = 0; j < NODES_NUM; j++)
+                  if (temp_graph[i][j].weight >
+                  temp_graph[i][k].weight +
+                  temp_graph[k][j].weight) {
+                      temp_graph[i][j].weight =
+                              temp_graph[i][k].weight +
+                              temp_graph[k][j].weight;
+                      temp_graph[i][j].index =
+                              temp_graph[k][j].index;
+  }
+}
+
+void get_previous_connections(int index){
+  for(int i = 0; i < NODES_NUM; i++){
+        previous_connections_row[i] = threadville_resources.threadville_graph[i][index];
+        previous_connections_column[i] = threadville_resources.threadville_graph[index][i];
+  }
+}
+
+void restore_previous_connections(graph_node_t graph_to_restore[NODES_NUM][NODES_NUM], int index){
+  for(int i = 0; i < NODES_NUM; i++){
+      graph_to_restore[i][index] = previous_connections_row[i];
+      graph_to_restore[index][i] = previous_connections_column[i];
+  }
+}
+
+void repair_cell(int index){
+  clock_t t;
+  int error_check;
+  int time_for_repair = exponential_random(40);
+  printf("Time for next repair: %i\n", time_for_repair);
+
+  int repair_duration = get_random(1,3)*5;
+  
+  t = clock();
+  get_previous_connections(index);
+  disable_cell(index);
+  recalculate_weight();
+  t = clock() - t;
+  double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
+  printf("Floyd took %f seconds to recalculate\n", time_taken);
+
+  if(time_taken < time_for_repair){
+    sleep(time_for_repair-time_taken);
+  }
+
+  error_check = pthread_mutex_lock(&threadville_resources.mutex);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+  copy_graph(temp_graph, threadville_resources.threadville_graph);
+  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+
+  repaired_index = index;
+
+  printf("repairing %i node for %i seconds\n", index, repair_duration);
+
+  sleep(repair_duration);
+
+
+  error_check = pthread_mutex_lock(&threadville_resources.mutex);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+  restore_previous_connections(threadville_resources.threadville_graph, index);
+  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+
+
+  repaired_index = -1;
+
+  restore_previous_connections(temp_graph, index);
+
+
+  printf("FINISHED REPAIRED BLOCK\n");
+
+}
+
+void* plan_reparations(void *arg){
+
+  int error_check;
+  if (!threadville_resources.init_done) {
+    error_check = pthread_mutex_lock(&threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_lock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+    }
+    error_check = pthread_cond_wait(&threadville_resources.init_thread_done, &threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+    error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+  }
+  while(1){
+    int row;
+    int column;
+
+    if ( get_random(1,2) < 2 ) {
+      row = get_random(0, 7);
+      if(row < 4 ){
+        row = roads_east_to_west_rows[row];
+      } else {
+        row = roads_west_to_east_rows[row%4];
+      }
+      column = get_random(0,47);
+    } else {
+      column = get_random(0,11);
+      if( column < 6 ){
+        column = roads_south_to_north[column];
+      } else {
+        column = roads_north_to_south[column%6];
+      }
+      row = get_random(0,37);
+    }
+
+    int index = row*MATRIX_COLUMNS + column;
+    repair_cell(index);
+  }
 }

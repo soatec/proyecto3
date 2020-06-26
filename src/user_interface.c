@@ -26,6 +26,8 @@ SDL_Event window_event;
 SDL_Surface *city_background;
 SDL_Surface *vehicle_images[3][10][4];
 
+int repaired_index = 0;
+
 //==================
 void create_new_ambulance(){
     vehicle_data_t *ambulance;
