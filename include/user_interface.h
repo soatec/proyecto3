@@ -4,6 +4,8 @@
 #include "threadville_types.h"
 #include <SDL2/SDL_surface.h>
 
+extern int repaired_index;
+
 /**
  * Init sdl needed components
  * @return

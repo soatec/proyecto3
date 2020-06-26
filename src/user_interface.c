@@ -34,6 +34,8 @@ SDL_Rect curly_down_pos;
 SDL_Rect shemp_up_pos;
 SDL_Rect shemp_down_pos;
 
+int repaired_index = 0;
+
 //==================
 void create_new_ambulance(){
     vehicle_data_t *ambulance;
