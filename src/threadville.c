@@ -13,15 +13,20 @@
 
 // Defines
 
+// Intersections
+#define INTERSECTIONS_ROW_IDX 38
+#define LOCATION_FIRST_PART_INTERSECTION 7
+#define FIRST_INTERSECTION_ROW_IDX 7
+#define SEPARATION_BETWEEN_INTERSECTIONS 8
+#define INTERSECTIONS_NUM 5
+
 #define INF 9999
 #define MATRIX_ROWS 39
 #define MATRIX_COLUMNS 48
 #define NODES_NUM MATRIX_ROWS * MATRIX_COLUMNS
 
-//#define RED_BUS_DESTINATIONS 12
-#define RED_BUS_DESTINATIONS 2
-//#define GREEN_BUS_DESTINATIONS 6
-#define GREEN_BUS_DESTINATIONS 2
+#define RED_BUS_DESTINATIONS 12
+#define GREEN_BUS_DESTINATIONS 6
 #define BLUE_BUS_DESTINATIONS 6
 #define WHITE_BUS_DESTINATIONS 6
 #define GRAY_BUS_DESTINATIONS 6
@@ -49,7 +54,7 @@
 
 // Traffic should prefer to use the highway
 #define HIGHWAY_WEIGHT 1
-#define ROAD_WEIGHT 1
+#define ROAD_WEIGHT 4
 
 #define HIGHWAY_Y_OFFSET_ROWS 19
 
@@ -96,38 +101,27 @@ typedef struct threadville_resources_t {
 
 
 destination_t destinations_red_bus[RED_BUS_DESTINATIONS] = {
-        {STOP, {.stop={G, THREE}}},
-        {STOP, {.stop={N, ONE}}},
-
-
-
-
-
-        //{STOP, {.stop={A, ONE}}},
-        //{STOP, {.stop={D, ONE}}},
-        //{STOP, {.stop={F, TWO}}},
-        //{STOP, {.stop={L, FOUR}}},
-        //{ROUNDABOUT, {.roundabout=Z}},
-        //{STOP, {.stop={R, TWO}}},
-        //{STOP, {.stop={X, FIVE}}},
-        //{STOP, {.stop={U, FIVE}}},
-        //{STOP, {.stop={S, SIX}}},
-        //{STOP, {.stop={M, ONE}}},
-        //{ROUNDABOUT, {.roundabout=Y}},
-        //{STOP, {.stop={G, FIVE}}}
+        {STOP, {.stop={A, ONE}}},
+        {STOP, {.stop={D, ONE}}},
+        {STOP, {.stop={F, TWO}}},
+        {STOP, {.stop={L, FOUR}}},
+        {ROUNDABOUT, {.roundabout=Z}},
+        {STOP, {.stop={R, TWO}}},
+        {STOP, {.stop={X, FIVE}}},
+        {STOP, {.stop={U, FIVE}}},
+        {STOP, {.stop={S, SIX}}},
+        {STOP, {.stop={M, ONE}}},
+        {ROUNDABOUT, {.roundabout=Y}},
+        {STOP, {.stop={G, FIVE}}}
 };
 
 destination_t destinations_green_bus[GREEN_BUS_DESTINATIONS] = {
-        {STOP, {.stop={N, SIX}}},
-        {STOP, {.stop={H, SIX}}},
-        /*
         {STOP, {.stop={E, TWO}}},
         {STOP, {.stop={L, THREE}}},
         {ROUNDABOUT, {.roundabout=Z}},
         {ROUNDABOUT, {.roundabout=Y}},
         {STOP, {.stop={G, SIX}}},
         {STOP, {.stop={B, ONE}}}
-         */
 };
 
 destination_t destinations_blue_bus[BLUE_BUS_DESTINATIONS] = {
@@ -973,8 +967,7 @@ void* move_vehicle(void *arg) {
         }
 
         if (current_cell_nodes[0]->is_stop){
-            //sleep(time_to_wait);
-            sleep(1);
+            sleep(time_to_wait);
         }
         current_cells[0] = &current_cell_nodes[0]->cell;
         current_cells[1] = &current_cell_nodes[0]->next->cell;
@@ -992,8 +985,7 @@ void* move_vehicle(void *arg) {
         [fixed_cell.row][fixed_cell.column]);
 
         // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
-        //move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
-        move(current_cells[0], current_cells[1], vehicle, 5000);
+        move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
 
         if (current_idx == vehicle->destinations_num - 1 && destination_idx == 0 && vehicle->type != BUS) {
             error_check = pthread_mutex_destroy(&vehicle->mutex);
@@ -1418,14 +1410,6 @@ void* load_matrix_data(void *arg) {
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = ROAD_WEIGHT;
         threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk + 1].weight = ROAD_WEIGHT;
     }
-
-    // Intersections
-#define INTERSECTIONS_ROW_IDX 38
-#define LOCATION_FIRST_PART_INTERSECTION 7
-#define FIRST_INTERSECTION_ROW_IDX 7
-#define SEPARATION_BETWEEN_INTERSECTIONS 8
-#define INTERSECTIONS_NUM 5
-
 
     int first_available_column = 0;
 
