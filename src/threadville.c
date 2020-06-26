@@ -590,16 +590,11 @@ void exit_bridge(int bridge_id, vehicle_data_t *vehicle){
     }
 }
 
-int check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_data_t *vehicle){
-    int bridge_id;
-    vehicle->direction = NORTH;
-    if (dest_cell.row > current_cell.row){
-        vehicle->direction = SOUTH;
+void check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_data_t *vehicle){
+    int bridge_id = (dest_cell.column - SEPARATION_BETWEEN_BRIDGES + 1) / SEPARATION_BETWEEN_BRIDGES;
+    if (dest_cell.column == 0 || dest_cell.column == 47) {
+        return;
     }
-    if (dest_cell.row == 20){
-        printf("HOLA\n");
-    }
-    bridge_id = (dest_cell.column - SEPARATION_BETWEEN_BRIDGES + 1) / SEPARATION_BETWEEN_BRIDGES;
     if ((dest_cell.row == first_bridge.row && vehicle->direction == SOUTH) ||
         (dest_cell.row == first_bridge.row + BRIDGE_SIZE - 1 && vehicle->direction == NORTH)){
         printf("%d enters bridge before moving to (%d, %d)\n", vehicle->id, dest_cell.row, dest_cell.column);
@@ -609,24 +604,48 @@ int check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_data
         printf("%d exits bridge before moving to (%d, %d)\n", vehicle->id, dest_cell.row, dest_cell.column);
         exit_bridge(bridge_id, vehicle);
     }
-    return bridge_id;
 }
 
 // PUBLIC FUNCTIONS
 
-
-
-
-void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *car, int micro_seconds){
+void update_direction(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle){
     position_t position = get_pos(*current_cell);
     double current_x = position.pos_x;
     double current_y = position.pos_y;
-    car->position.pos_x = current_x;
-    car->position.pos_y = current_y;
+    vehicle->position.pos_x = current_x;
+    vehicle->position.pos_y = current_y;
 
     position = get_pos(*next_cell);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
+
+    if (final_y > current_y){
+        vehicle->direction = SOUTH;
+    } else if (final_y < current_y){
+        vehicle->direction = NORTH;
+    }
+
+    if (final_x > current_x){
+        vehicle->direction = EAST;
+    } else if (final_x < current_x){
+        vehicle->direction = WEST;
+    }
+}
+
+
+
+void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle, int micro_seconds){
+    position_t position = get_pos(*current_cell);
+    double current_x = position.pos_x;
+    double current_y = position.pos_y;
+    vehicle->position.pos_x = current_x;
+    vehicle->position.pos_y = current_y;
+
+    position = get_pos(*next_cell);
+    double final_x = position.pos_x;
+    double final_y = position.pos_y;
+
+    update_direction(current_cell, next_cell, vehicle);
 
     while(current_x != final_x || current_y != final_y) {
         if (current_x < final_x) {
@@ -639,8 +658,8 @@ void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *car, int micr
         } else if (current_y < final_y) {
             current_y++;
         }
-        car->position.pos_x = current_x;
-        car->position.pos_y = current_y;
+        vehicle->position.pos_x = current_x;
+        vehicle->position.pos_y = current_y;
         usleep(1000 * micro_seconds);
     }
 }
@@ -731,11 +750,13 @@ void* move_vehicle(void *arg) {
     cell_list_t *current_lists[2];
 
     cell_t initial_cell = get_cell(&vehicle->destinations[0]);
+    cell_t after_initial_cell = get_cell(&vehicle->destinations[1]);
     position_t current_position = get_pos(initial_cell);
 
     // Set position before waitinf for init done
     vehicle->position.pos_x = current_position.pos_x;
     vehicle->position.pos_y = current_position.pos_y;
+    update_direction(&initial_cell, &after_initial_cell, vehicle);
 
     if (!threadville_resources.init_done) {
         error_check = pthread_mutex_lock(&threadville_resources.mutex);
