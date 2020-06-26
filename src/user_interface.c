@@ -33,9 +33,8 @@ SDL_Surface *vehicle_images[3][10][4];
 void create_new_ambulance(){
     vehicle_data_t *ambulance;
     ambulance = (vehicle_data_t *)malloc(sizeof(vehicle_data_t));
-    ambulance->position.pos_x = 500;
-    ambulance->position.pos_y = 550;
-    // TODO: Llenar la estructura vehicle_data_t con los datos de la nueva ambulancia
+    ambulance->type = AMBULANCE;
+    ambulance->active = true;
     add_vehicle_to_list(ambulances, ambulance);
     new_vehicle(ambulance);
 }
@@ -185,7 +184,14 @@ void destroy_ui() {
 void update_vehicle_positions() {
     SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
     vehicle_node_t * current_vehicle = cars->vehicle_node;
+    vehicle_node_t * temp_vehicle;
     while (current_vehicle != NULL) {
+        if (current_vehicle->vehicle->finished == true){
+            temp_vehicle = current_vehicle->next;
+            delete_vehicle_from_list(cars, current_vehicle);
+            current_vehicle = temp_vehicle;
+            continue;
+        }
         SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->image_position);
         current_vehicle->vehicle->image_position.x = current_vehicle->vehicle->position.pos_x;
         current_vehicle->vehicle->image_position.y = current_vehicle->vehicle->position.pos_y;
@@ -193,6 +199,12 @@ void update_vehicle_positions() {
     }
     current_vehicle = ambulances->vehicle_node;
     while (current_vehicle != NULL) {
+        if (current_vehicle->vehicle->finished == true){
+            temp_vehicle = current_vehicle->next;
+            delete_vehicle_from_list(ambulances, current_vehicle);
+            current_vehicle = temp_vehicle;
+            continue;
+        }
         SDL_BlitSurface(get_vehicle_image(current_vehicle->vehicle), NULL, main_window_surface, &current_vehicle->vehicle->image_position);
         current_vehicle->vehicle->image_position.x = current_vehicle->vehicle->position.pos_x;
         current_vehicle->vehicle->image_position.y = current_vehicle->vehicle->position.pos_y;
@@ -228,21 +240,11 @@ void core_loop() {
     create_new_bus(PINK);
     create_new_bus(LIGHT_BLUE);
     create_new_bus(ORANGE);
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_ambulance();
+    create_new_ambulance();
+    create_new_ambulance();
 
 
 
