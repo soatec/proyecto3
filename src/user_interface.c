@@ -193,9 +193,11 @@ void update_vehicle_positions() {
 }
 
 void update_repairs_position() {
-    repair_image_pos.x = (((int)(repaired_index / 48))*20)+100;
-    repair_image_pos.y = (repaired_index % 48)*20;
-    SDL_BlitSurface(repair, NULL, main_window_surface, &repair_image_pos);
+    if (repaired_index!=-1) {
+        repair_image_pos.x = (repaired_index % 48)*20+100;
+        repair_image_pos.y = (((int)(repaired_index / 48))*20);
+        SDL_BlitSurface(repair, NULL, main_window_surface, &repair_image_pos);
+    }
 }
 
 //TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
