@@ -25,6 +25,22 @@ void add_vehicle_to_list(vehicle_list_t *vehicle_list, vehicle_data_t *vehicle){
     vehicle_list->counter++;
 }
 
+void delete_vehicle_from_list(vehicle_list_t *vehicle_list, vehicle_node_t *vehicle){
+    vehicle_node_t *previous_node = vehicle_list->vehicle_node;
+    vehicle_node_t *current_node = vehicle_list->vehicle_node->next;
+    if (previous_node == vehicle) {
+        vehicle_list->vehicle_node = vehicle->next;
+    } else {
+        while(current_node != vehicle){
+            previous_node = current_node;
+            current_node = current_node->next;
+        }
+        previous_node->next = current_node->next;
+    }
+    free(vehicle->vehicle);
+    free(vehicle);
+}
+
 void init_cell_list(cell_list_t *cell_list, int weight){
     cell_list->cell_node = NULL;
     cell_list->weight = weight;
@@ -45,6 +61,19 @@ void add_cell_to_list(cell_list_t *cell_list, cell_t cell){
     }
     current_node->cell = cell;
     current_node->next = NULL;
+}
+
+void destroy_cell_list(cell_list_t *list){
+    cell_node_t *current_node = list->cell_node;
+    cell_node_t *next_node = current_node->next;
+    while (current_node != NULL){
+        free(current_node);
+        current_node = next_node;
+        if (next_node != NULL) {
+            next_node = next_node->next;
+        }
+    }
+    free(list);
 }
 
 double exponential_random(double mean) {
