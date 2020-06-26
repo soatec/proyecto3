@@ -270,59 +270,64 @@ threadville_resources_t threadville_resources;
 
 cell_t get_cell(destination_t *destination){
     cell_t cell;
-    switch(destination->destination.stop.block){
-        case A:
-        case B:
-        case C:
-        case D:
-        case E:
-        case F:
-            cell = stops[PATTERN_1][destination->destination.stop.stop];
-            cell.column = cell.column + 8 * destination->destination.stop.block;
+    switch(destination->destination_type){
+        case STOP:
+            switch(destination->destination.stop.block){
+                case A:
+                case B:
+                case C:
+                case D:
+                case E:
+                case F:
+                    cell = stops[PATTERN_1][destination->destination.stop.stop];
+                    cell.column = cell.column + 8 * destination->destination.stop.block;
+                    break;
+                case G:
+                case H:
+                case I:
+                case J:
+                case K:
+                case L:
+                    cell = stops[PATTERN_2][destination->destination.stop.stop];
+                    cell.column = cell.column + 8 * (destination->destination.stop.block - G);
+                    break;
+                case M:
+                case N:
+                case O:
+                case P:
+                case Q:
+                case R:
+                    cell = stops[PATTERN_3][destination->destination.stop.stop];
+                    cell.column = cell.column + 8 * (destination->destination.stop.block - M);
+                    break;
+                case S:
+                case T:
+                case U:
+                case V:
+                case W:
+                case X:
+                    cell = stops[PATTERN_1][destination->destination.stop.stop];
+                    cell.column = cell.column + 8 * (destination->destination.stop.block - S);
+                    cell.row = cell.row + 26;
+                default:
+                    //ERROR
+                    ;
+            }
             break;
-        case G:
-        case H:
-        case I:
-        case J:
-        case K:
-        case L:
-            cell = stops[PATTERN_2][destination->destination.stop.stop];
-            cell.column = cell.column + 8 * (destination->destination.stop.block - G);
-            break;
-        case M:
-        case N:
-        case O:
-        case P:
-        case Q:
-        case R:
-            cell = stops[PATTERN_3][destination->destination.stop.stop];
-            cell.column = cell.column + 8 * (destination->destination.stop.block - M);
-            break;
-        case S:
-        case T:
-        case U:
-        case V:
-        case W:
-        case X:
-            cell = stops[PATTERN_1][destination->destination.stop.stop];
-            cell.column = cell.column + 8 * (destination->destination.stop.block - S);
-            cell.row = cell.row + 26;
-        default:
-            //ERROR
-            ;
-    }
-    switch (destination->destination.roundabout) {
-        case Y:
-            cell.column = 0;
-            cell.row    = FIRST_HIGHWAY_ROW;
-            break;
-        case Z:
-            cell.column = MATRIX_COLUMNS - 1;
-            cell.row    = FIRST_HIGHWAY_ROW;
-            break;
-        default:
-            //ERROR
-            ;
+        case ROUNDABOUT:
+            switch (destination->destination.roundabout) {
+                case Y:
+                    cell.column = 0;
+                    cell.row    = FIRST_HIGHWAY_ROW;
+                    break;
+                case Z:
+                    cell.column = MATRIX_COLUMNS - 1;
+                    cell.row    = FIRST_HIGHWAY_ROW;
+                    break;
+                default:
+                    //ERROR
+                    ;
+            }
     }
     return cell;
 }
