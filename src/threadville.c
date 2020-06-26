@@ -14,12 +14,12 @@
 // Defines
 
 #define INF 9999
-#define MATRIX_ROWS 38
+#define MATRIX_ROWS 39
 #define MATRIX_COLUMNS 48
 #define NODES_NUM MATRIX_ROWS * MATRIX_COLUMNS
 
 //#define RED_BUS_DESTINATIONS 12
-#define RED_BUS_DESTINATIONS 2
+#define RED_BUS_DESTINATIONS 10
 #define GREEN_BUS_DESTINATIONS 6
 #define BLUE_BUS_DESTINATIONS 6
 #define WHITE_BUS_DESTINATIONS 6
@@ -40,6 +40,7 @@
 #define UPTOWN_MOST_SOUTHERN_ROW 13
 #define UNDERGROUND_MOST_NORTHERN_ROW 20
 #define FIRST_HIGHWAY_ROW 34
+#define LAST_HIGHWAY_ROW 38
 
 #define BUS_TIME_SECS 5
 #define CAR_TIME_SECS 3
@@ -50,6 +51,8 @@
 #define ROAD_WEIGHT 1
 
 #define HIGHWAY_Y_OFFSET_ROWS 19
+
+
 
 // Enums
 
@@ -92,8 +95,24 @@ typedef struct threadville_resources_t {
 
 
 destination_t destinations_red_bus[RED_BUS_DESTINATIONS] = {
-        {STOP, {.stop={A, ONE}}},
-        {STOP, {.stop={F, TWO}}},
+        {STOP, {.stop={M, THREE}}},
+        {STOP, {.stop={N, SIX}}},
+
+        {STOP, {.stop={N, THREE}}},
+        {STOP, {.stop={O, SIX}}},
+
+        {STOP, {.stop={O, THREE}}},
+        {STOP, {.stop={P, SIX}}},
+
+        {STOP, {.stop={P, THREE}}},
+        {STOP, {.stop={Q, SIX}}},
+
+        {STOP, {.stop={Q, THREE}}},
+        {STOP, {.stop={R, SIX}}},
+
+
+
+
         //{STOP, {.stop={A, ONE}}},
         //{STOP, {.stop={D, ONE}}},
         //{STOP, {.stop={F, TWO}}},
@@ -501,8 +520,47 @@ void* test_bus(void *arg) {
 
 }
 
+cell_t get_old_cell_pos_int(cell_t cell){
+    cell_t old_cell;
+    if (threadville_resources.cells_type[cell.row][cell.column] != ESP_INTERSECTION_CELL){
+        return cell;
+    }
+    int offset;
+    if (cell.column < 10){
+        old_cell.row = cell.row - 31;
+        if (cell.column == 0 || cell.column == 1){
+            offset = 0;
+        } else if (cell.column == 2 || cell.column == 3){
+            offset = 1;
+        } else if (cell.column == 4 || cell.column == 5){
+            offset = 2;
+        } else if (cell.column == 6 || cell.column == 7){
+            offset = 3;
+        } else {
+            offset = 4;
+        }
+        old_cell.column = (cell.column + 7) + 6 * offset;
+    } else {
+        old_cell.row = cell.row - 12;
+        if (cell.column == 10 || cell.column == 11){
+            offset = 0;
+        } else if (cell.column == 12 || cell.column == 13){
+            offset = 1;
+        } else if (cell.column == 14 || cell.column == 15){
+            offset = 2;
+        } else if (cell.column == 16 || cell.column == 17){
+            offset = 3;
+        } else {
+            offset = 4;
+        }
+        old_cell.column = (cell.column - 3) + 6 * offset;
+    }
+    return old_cell;
+}
+
 position_t get_pos(cell_t cell){
     position_t position;
+    cell_t old_cell;
     position.pos_x = cell.column * threadville_resources.screen_position_data.height_car +
                      threadville_resources.screen_position_data.offset_x;
     position.pos_y = cell.row * threadville_resources.screen_position_data.height_car +
@@ -515,6 +573,13 @@ position_t get_pos(cell_t cell){
         // TODO: Enhance roundabout positions
         case ROUNDABOUT_CELL:
             position.pos_y -= HIGHWAY_Y_OFFSET_ROWS * threadville_resources.screen_position_data.height_car;
+            break;
+        case ESP_INTERSECTION_CELL:
+            old_cell = get_old_cell_pos_int(cell);
+            position.pos_x =  old_cell.column * threadville_resources.screen_position_data.height_car +
+                              threadville_resources.screen_position_data.offset_x;
+            position.pos_y = old_cell.row * threadville_resources.screen_position_data.height_car +
+                             threadville_resources.screen_position_data.offset_y;
         default:
             ;
     }
@@ -689,6 +754,7 @@ void update_initial_direction(destination_t *initial_destination, vehicle_data_t
                     //ERROR
                     ;
             }
+            break;
         case ROUNDABOUT:
             switch (initial_destination->destination.roundabout){
                 case Y:
@@ -835,6 +901,7 @@ void* move_vehicle(void *arg) {
         time_to_wait = AMBULANCE_TIME_SECS;
         needed_cells = 2;
     }
+    cell_t fixed_cell;
     cell_t *current_cells[needed_cells];
     cell_node_t *current_cell_nodes[needed_cells];
     cell_list_t *current_lists[2];
@@ -884,9 +951,10 @@ void* move_vehicle(void *arg) {
     current_cell_nodes[1] = current_cell_nodes[0]->next;
 
     for (int i = 0; i < needed_cells - 1; i++){
-        printf("%d blocking: (%d, %d) \n", vehicle->id, current_cell_nodes[i]->cell.row, current_cell_nodes[i]->cell.column);
+        fixed_cell = get_old_cell_pos_int(current_cell_nodes[i]->cell);
+        printf("%d blocking: (%d, %d) \n", vehicle->id, fixed_cell.row, fixed_cell.column);
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-        [current_cell_nodes[i]->cell.row][current_cell_nodes[i]->cell.column]);
+        [fixed_cell.row][fixed_cell.column]);
     }
 
     while (current_cell_nodes[0] != NULL){
@@ -895,7 +963,8 @@ void* move_vehicle(void *arg) {
         }
 
         if (current_cell_nodes[0]->is_stop){
-            sleep(time_to_wait);
+            //sleep(time_to_wait);
+            sleep(1);
         }
         current_cells[0] = &current_cell_nodes[0]->cell;
         current_cells[1] = &current_cell_nodes[0]->next->cell;
@@ -905,13 +974,16 @@ void* move_vehicle(void *arg) {
         printf("%d blocking: (%d, %d) \n", vehicle->id, current_cells[needed_cells - 1]->row, current_cells[needed_cells - 1]->column);
         printf("%d unblocking: (%d, %d) \n", vehicle->id, current_cells[0]->row, current_cells[0]->column);
 
+        fixed_cell = get_old_cell_pos_int(*current_cells[needed_cells - 1]);
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
-        [current_cells[needed_cells - 1]->row][current_cells[needed_cells - 1]->column]);
+        [fixed_cell.row][fixed_cell.column]);
+        fixed_cell = get_old_cell_pos_int(*current_cells[0]);
         pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
-        [current_cells[0]->row][current_cells[0]->column]);
+        [fixed_cell.row][fixed_cell.column]);
 
         // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
-        move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
+        //move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
+        move(current_cells[0], current_cells[1], vehicle, 5000);
 
         if (current_idx == vehicle->destinations_num - 1 && destination_idx == 0 && vehicle->type != BUS) {
             error_check = pthread_mutex_destroy(&vehicle->mutex);
@@ -920,8 +992,9 @@ void* move_vehicle(void *arg) {
                         errno, strerror(errno));
             }
             free(vehicle->destinations);
+            fixed_cell = get_old_cell_pos_int(*current_cells[needed_cells - 1]);
             pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
-            [current_cells[needed_cells - 1]->row][current_cells[needed_cells - 1]->column]);
+            [fixed_cell.row][fixed_cell.column]);
             destroy_cell_list(current_lists[0]);
             vehicle->finished = true;
             pthread_exit(NULL);
@@ -1088,6 +1161,10 @@ void new_vehicle(vehicle_data_t *vehicle) {
     }
 }
 
+int get_cell_id(int row, int column){
+    return row * MATRIX_COLUMNS + column;
+}
+
 void* load_matrix_data(void *arg) {
     clock_t t;
     clock_t t_total;
@@ -1179,7 +1256,7 @@ void* load_matrix_data(void *arg) {
 
     // Add south-to-north road (Y)
     current_column = roads_south_to_north[0];
-    for (int row = FIRST_HIGHWAY_ROW; row < MATRIX_ROWS; row++) {
+    for (int row = FIRST_HIGHWAY_ROW; row < LAST_HIGHWAY_ROW; row++) {
         threadville_resources.cells_type[row][current_column] = ROUNDABOUT_CELL;
         if (row > FIRST_HIGHWAY_ROW) {
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * row]
@@ -1200,13 +1277,13 @@ void* load_matrix_data(void *arg) {
 
 
     // Connect roundabout most southern to west-to-east highway
-    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
-    [(current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1)].weight = HIGHWAY_WEIGHT;
-    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
-    [(current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 2)].weight = HIGHWAY_WEIGHT;
+    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)]
+    [(current_column + 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)].weight = HIGHWAY_WEIGHT;
+    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)]
+    [(current_column + 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 2)].weight = HIGHWAY_WEIGHT;
 
-    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1), (current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
-    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1), (current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 2));
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1), (current_column + 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1));
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1), (current_column + 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 2));
 
     // Connect east-to-west highway to roundabout most northern
     threadville_resources.threadville_graph[(current_column + 1) + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW]
@@ -1219,9 +1296,9 @@ void* load_matrix_data(void *arg) {
 
     // Add north-to-south road (Z)
     current_column = roads_north_to_south[ROAD_NORTH_TO_SOUTH_NUM - 1];
-    for (int row = FIRST_HIGHWAY_ROW + 1; row <= MATRIX_ROWS; row++){
+    for (int row = FIRST_HIGHWAY_ROW + 1; row <= LAST_HIGHWAY_ROW; row++){
         threadville_resources.cells_type[row - 1][current_column] = ROUNDABOUT_CELL;
-        if (row < MATRIX_ROWS) {
+        if (row < LAST_HIGHWAY_ROW) {
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (row-1)]
             [current_column + MATRIX_COLUMNS * row].weight = HIGHWAY_WEIGHT;
             printf("K: %d -> %d\n", current_column + MATRIX_COLUMNS * (row-1), current_column + MATRIX_COLUMNS * row);
@@ -1239,13 +1316,13 @@ void* load_matrix_data(void *arg) {
     printf("F: %d -> %d\n", current_column + MATRIX_COLUMNS * UPTOWN_MOST_SOUTHERN_ROW, current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
 
     // Connect west-to-east highway to roundabout most southern
-    threadville_resources.threadville_graph[(current_column - 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
-    [current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)].weight = HIGHWAY_WEIGHT;
-    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 2) - 1]
-    [current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)].weight = HIGHWAY_WEIGHT;
+    threadville_resources.threadville_graph[(current_column - 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)]
+    [current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)].weight = HIGHWAY_WEIGHT;
+    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 2) - 1]
+    [current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1)].weight = HIGHWAY_WEIGHT;
 
-    printf("%d -> %d\n", (current_column - 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1), current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
-    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 2) - 1, current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
+    printf("%d -> %d\n", (current_column - 1) + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1), current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1));
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 2) - 1, current_column + MATRIX_COLUMNS * (LAST_HIGHWAY_ROW - 1));
 
     // Connect roundabout most northern to east-to-west highway
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW]
@@ -1318,6 +1395,100 @@ void* load_matrix_data(void *arg) {
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = ROAD_WEIGHT;
         threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk].weight = ROAD_WEIGHT;
     }
+
+    // Intersections
+#define INTERSECTIONS_ROW_IDX 38
+#define LOCATION_FIRST_PART_INTERSECTION 7
+#define FIRST_INTERSECTION_ROW_IDX 7
+#define SEPARATION_BETWEEN_INTERSECTIONS 8
+#define INTERSECTIONS_NUM 5
+
+
+    int first_available_column = 0;
+
+    cell_t original_first_part_interseccion;
+    cell_t original_second_part_interseccion;
+    cell_t new_first_part_interseccion;
+    cell_t new_second_part_interseccion;
+    for (int intersection = 0; intersection < INTERSECTIONS_NUM; intersection++){
+
+        original_first_part_interseccion.row = FIRST_INTERSECTION_ROW_IDX;
+        original_first_part_interseccion.column = LOCATION_FIRST_PART_INTERSECTION + SEPARATION_BETWEEN_INTERSECTIONS * intersection;
+        original_second_part_interseccion.row = original_first_part_interseccion.row;
+        original_second_part_interseccion.column = original_first_part_interseccion.column + 1;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(original_second_part_interseccion.row + 1, original_second_part_interseccion.column)]
+        [get_cell_id(original_second_part_interseccion.row, original_second_part_interseccion.column)].weight = INF;
+
+
+        new_first_part_interseccion.row = INTERSECTIONS_ROW_IDX;
+        new_first_part_interseccion.column = first_available_column;
+        new_second_part_interseccion.row = new_first_part_interseccion.row;
+        new_second_part_interseccion.column = new_first_part_interseccion.column + 1;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_first_part_interseccion.row, new_first_part_interseccion.column)]
+        [get_cell_id(original_first_part_interseccion.row, original_first_part_interseccion.column - 1)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_second_part_interseccion.row, new_second_part_interseccion.column)]
+        [get_cell_id(new_first_part_interseccion.row, new_first_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(original_second_part_interseccion.row + 1, original_second_part_interseccion.column)]
+        [get_cell_id(new_second_part_interseccion.row, new_second_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_second_part_interseccion.row, new_second_part_interseccion.column)]
+        [get_cell_id(original_second_part_interseccion.row - 1, original_second_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.cells_type[new_first_part_interseccion.row][new_first_part_interseccion.column] = ESP_INTERSECTION_CELL;
+        threadville_resources.cells_type[new_second_part_interseccion.row][new_second_part_interseccion.column] = ESP_INTERSECTION_CELL;
+        first_available_column += 2;
+    }
+
+    for (int intersection = 0; intersection < INTERSECTIONS_NUM; intersection++){
+
+        original_first_part_interseccion.row = FIRST_INTERSECTION_ROW_IDX + 19;
+        original_first_part_interseccion.column = LOCATION_FIRST_PART_INTERSECTION + SEPARATION_BETWEEN_INTERSECTIONS * intersection;
+
+        original_second_part_interseccion.row = original_first_part_interseccion.row;
+        original_second_part_interseccion.column = original_first_part_interseccion.column + 1;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(original_first_part_interseccion.row - 1, original_first_part_interseccion.column)]
+        [get_cell_id(original_first_part_interseccion.row, original_first_part_interseccion.column)].weight = INF;
+
+
+        new_first_part_interseccion.row = INTERSECTIONS_ROW_IDX;
+        new_first_part_interseccion.column = first_available_column;
+        new_second_part_interseccion.row = new_first_part_interseccion.row;
+        new_second_part_interseccion.column = new_first_part_interseccion.column + 1;
+
+
+        threadville_resources.threadville_graph
+        [get_cell_id(original_first_part_interseccion.row - 1, original_first_part_interseccion.column)]
+        [get_cell_id(new_first_part_interseccion.row, new_first_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_first_part_interseccion.row, new_first_part_interseccion.column)]
+        [get_cell_id(new_second_part_interseccion.row, new_second_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_first_part_interseccion.row, new_first_part_interseccion.column)]
+        [get_cell_id(original_first_part_interseccion.row + 1, original_first_part_interseccion.column)].weight = ROAD_WEIGHT;
+
+        threadville_resources.threadville_graph
+        [get_cell_id(new_second_part_interseccion.row, new_second_part_interseccion.column)]
+        [get_cell_id(original_second_part_interseccion.row, original_second_part_interseccion.column + 1)].weight = ROAD_WEIGHT;
+
+
+        threadville_resources.cells_type[new_first_part_interseccion.row][new_first_part_interseccion.column] = ESP_INTERSECTION_CELL;
+        threadville_resources.cells_type[new_second_part_interseccion.row][new_second_part_interseccion.column] = ESP_INTERSECTION_CELL;
+        first_available_column += 2;
+    }
+
 
     t = clock();
     // Solve Floyd algorithm
