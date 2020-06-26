@@ -567,7 +567,11 @@ position_t get_pos(cell_t cell){
                      threadville_resources.screen_position_data.offset_y;
     switch (threadville_resources.cells_type[cell.row][cell.column]){
         case BRIDGE_CELL:
-            position.pos_x += threadville_resources.screen_position_data.height_car / 2;
+            if (cell.column % 2 == 0){
+                position.pos_x -= threadville_resources.screen_position_data.height_car / 2;
+            } else {
+                position.pos_x += threadville_resources.screen_position_data.height_car / 2;
+            }
             break;
         case HIGHWAY_CELL:
         // TODO: Enhance roundabout positions
@@ -1369,14 +1373,20 @@ void* load_matrix_data(void *arg) {
     for (int bridge = 0; bridge < BRIDGE_MAX; bridge++) {
         for (int chunk = 0; chunk < BRIDGE_SIZE; chunk++){
             current_row = first_bridge.row + chunk;
+
             current_column = first_bridge.column + SEPARATION_BETWEEN_BRIDGES * bridge;
             threadville_resources.cells_type[current_row][current_column] = BRIDGE_CELL;
+
+            current_column = first_bridge.column + SEPARATION_BETWEEN_BRIDGES * bridge;
+            threadville_resources.cells_type[current_row][current_column + 1] = BRIDGE_CELL;
+
             threadville_resources.threadville_graph
             [current_column + MATRIX_COLUMNS * current_row]
-            [current_column + MATRIX_COLUMNS * (current_row + 1) ].weight = ROAD_WEIGHT;
+            [current_column + MATRIX_COLUMNS * (current_row + 1)].weight = ROAD_WEIGHT;
+
             threadville_resources.threadville_graph
-            [current_column + MATRIX_COLUMNS * (current_row + 1)]
-            [current_column + MATRIX_COLUMNS * current_row].weight = ROAD_WEIGHT;
+            [(current_column + 1) + MATRIX_COLUMNS * (current_row + 1)]
+            [(current_column + 1) + MATRIX_COLUMNS * current_row].weight = ROAD_WEIGHT;
         }
     }
 
@@ -1386,14 +1396,15 @@ void* load_matrix_data(void *arg) {
         current_column = first_bridge.column + SEPARATION_BETWEEN_BRIDGES * bridge;
         last_road_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row - 1) ;
         first_bridge_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row) ;
+
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = ROAD_WEIGHT;
-        threadville_resources.threadville_graph[first_bridge_chunk][last_road_chunk + 1].weight = ROAD_WEIGHT;
+        threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk + 1].weight = ROAD_WEIGHT;
 
         // Northern side of the bridge
         last_road_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE - 1);
         first_bridge_chunk = current_column + MATRIX_COLUMNS * (first_bridge.row + BRIDGE_SIZE);
         threadville_resources.threadville_graph[last_road_chunk][first_bridge_chunk].weight = ROAD_WEIGHT;
-        threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk].weight = ROAD_WEIGHT;
+        threadville_resources.threadville_graph[first_bridge_chunk + 1][last_road_chunk + 1].weight = ROAD_WEIGHT;
     }
 
     // Intersections
