@@ -45,7 +45,7 @@
 #define AMBULANCE_TIME_SECS 1
 
 // Traffic should prefer to use the highway
-#define HIGHWAY_WEIGHT 3
+#define HIGHWAY_WEIGHT 1
 #define ROAD_WEIGHT 1
 
 #define HIGHWAY_Y_OFFSET_ROWS 19
@@ -507,6 +507,7 @@ position_t get_pos(cell_t cell){
     switch (threadville_resources.cells_type[cell.row][cell.column]){
         case BRIDGE_CELL:
             position.pos_x += threadville_resources.screen_position_data.height_car / 2;
+            break;
         case HIGHWAY_CELL:
         // TODO: Enhance roundabout positions
         case ROUNDABOUT_CELL:
@@ -606,31 +607,117 @@ void check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_dat
     }
 }
 
-// PUBLIC FUNCTIONS
+void update_initial_direction(destination_t *initial_destination, vehicle_data_t *vehicle){
+    switch (initial_destination->destination_type){
+        case STOP:
+            switch (initial_destination->destination.stop.block){
+                case A:
+                case B:
+                case C:
+                case D:
+                case E:
+                case F:
+                case S:
+                case T:
+                case U:
+                case V:
+                case W:
+                case X:
+                    switch (initial_destination->destination.stop.stop){
+                        case ONE:
+                        case TWO:
+                            vehicle->direction = EAST;
+                            break;
+                        case THREE:
+                        case FOUR:
+                            vehicle->direction = SOUTH;
+                            break;
+                        case FIVE:
+                        case SIX:
+                            vehicle->direction = WEST;
+                            break;
+                        case SEVEN:
+                        case EIGHT:
+                            vehicle->direction = NORTH;
+                    }
+                    break;
+                case G:
+                case H:
+                case I:
+                case J:
+                case K:
+                case L:
+                    switch (initial_destination->destination.stop.stop){
+                        case ONE:
+                        case TWO:
+                            vehicle->direction = WEST;
+                            break;
+                        case THREE:
+                        case FOUR:
+                            vehicle->direction = SOUTH;
+                            break;
+                        case FIVE:
+                        case SIX:
+                            vehicle->direction = NORTH;
+                    }
+                    break;
+                case M:
+                case N:
+                case O:
+                case P:
+                case Q:
+                case R:
+                    switch (initial_destination->destination.stop.stop){
+                        case TWO:
+                        case THREE:
+                            vehicle->direction = SOUTH;
+                            break;
+
+                        case FOUR:
+                        case FIVE:
+                            vehicle->direction = EAST;
+                            break;
+                        case ONE:
+                        case SIX:
+                            vehicle->direction = NORTH;
+                    }
+                    break;
+                default:
+                    //ERROR
+                    ;
+            }
+        case ROUNDABOUT:
+            switch (initial_destination->destination.roundabout){
+                case Y:
+                    vehicle->direction = EAST;
+                    break;
+                case Z:
+                    vehicle->direction = WEST;
+            }
+    }
+}
 
 void update_direction(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle){
     position_t position = get_pos(*current_cell);
     double current_x = position.pos_x;
     double current_y = position.pos_y;
-    vehicle->position.pos_x = current_x;
-    vehicle->position.pos_y = current_y;
 
     position = get_pos(*next_cell);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
 
-    if (final_y > current_y){
+    if (final_y - current_y > 0){
         vehicle->direction = SOUTH;
-    } else if (final_y < current_y){
+    } else if (final_y - current_y < 0){
         vehicle->direction = NORTH;
-    }
-
-    if (final_x > current_x){
+    } else if (final_x - current_x > 0){
         vehicle->direction = EAST;
-    } else if (final_x < current_x){
+    } else if (final_x - current_x < 0){
         vehicle->direction = WEST;
     }
 }
+
+// PUBLIC FUNCTIONS
 
 
 
@@ -750,13 +837,13 @@ void* move_vehicle(void *arg) {
     cell_list_t *current_lists[2];
 
     cell_t initial_cell = get_cell(&vehicle->destinations[0]);
-    cell_t after_initial_cell = get_cell(&vehicle->destinations[1]);
     position_t current_position = get_pos(initial_cell);
 
     // Set position before waitinf for init done
     vehicle->position.pos_x = current_position.pos_x;
     vehicle->position.pos_y = current_position.pos_y;
-    update_direction(&initial_cell, &after_initial_cell, vehicle);
+
+    update_initial_direction(&vehicle->destinations[0], vehicle);
 
     if (!threadville_resources.init_done) {
         error_check = pthread_mutex_lock(&threadville_resources.mutex);
@@ -926,17 +1013,17 @@ void* load_matrix_data(void *arg) {
     for (int row = 0; row < ROAD_WEST_TO_EAST_NUM; row++) {
         current_row = roads_west_to_east_rows[row];
         for (int column = 0; column < MATRIX_COLUMNS - 1; column++) {
-            if (row < FIRST_HIGHWAY_ROW) {
+            if (current_row < FIRST_HIGHWAY_ROW) {
                 threadville_resources.cells_type[current_row][column] = ROAD_CELL;
                 threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row]
                 [column + MATRIX_COLUMNS * current_row + 1].weight = ROAD_WEIGHT;
             } else {
                 // First column corresponds to roundabout
                 if (column == 0) continue;
-                threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row]
-                [column + MATRIX_COLUMNS * current_row + 1].weight = HIGHWAY_CELL;
+                threadville_resources.cells_type[current_row][column] = HIGHWAY_CELL;
                 threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row]
                 [column + MATRIX_COLUMNS * current_row + 1].weight = HIGHWAY_WEIGHT;
+                printf("P: %d -> %d\n", column + MATRIX_COLUMNS * current_row, column + MATRIX_COLUMNS * current_row + 1);
             }
         }
     }
@@ -945,7 +1032,7 @@ void* load_matrix_data(void *arg) {
     for (int row = 0; row < ROAD_EAST_TO_WEST_NUM; row++) {
         current_row = roads_east_to_west_rows[row];
         for (int column = 0; column < MATRIX_COLUMNS - 1; column++) {
-            if (row < FIRST_HIGHWAY_ROW) {
+            if (current_row < FIRST_HIGHWAY_ROW) {
                 threadville_resources.cells_type[current_row][column] = ROAD_CELL;
                 threadville_resources.threadville_graph[column + MATRIX_COLUMNS * current_row + 1]
                 [column + MATRIX_COLUMNS * current_row].weight = ROAD_WEIGHT;
@@ -998,15 +1085,20 @@ void* load_matrix_data(void *arg) {
         if (row > FIRST_HIGHWAY_ROW) {
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * row]
             [current_column + MATRIX_COLUMNS * (row - 1)].weight = HIGHWAY_WEIGHT;
+            printf("K: %d -> %d\n", current_column + MATRIX_COLUMNS * row, current_column + MATRIX_COLUMNS * (row - 1));
         } else {
           // Connect roundabout most northen row to uptown most southern row
           threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * row]
           [current_column + MATRIX_COLUMNS * UPTOWN_MOST_SOUTHERN_ROW].weight = HIGHWAY_WEIGHT;
+
+            printf("R: %d -> %d\n", current_column + MATRIX_COLUMNS * row, current_column + MATRIX_COLUMNS * UPTOWN_MOST_SOUTHERN_ROW);
         }
     }
     // Connect underground most northern row to roundabout most southern row
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * UNDERGROUND_MOST_NORTHERN_ROW]
     [current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW].weight = HIGHWAY_WEIGHT;
+    printf("F: %d -> %d\n", current_column + MATRIX_COLUMNS * UNDERGROUND_MOST_NORTHERN_ROW, current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
+
 
     // Connect roundabout most southern to west-to-east highway
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
@@ -1014,11 +1106,17 @@ void* load_matrix_data(void *arg) {
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
     [(current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 2)].weight = HIGHWAY_WEIGHT;
 
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1), (current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1), (current_column + 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 2));
+
     // Connect east-to-west highway to roundabout most northern
     threadville_resources.threadville_graph[(current_column + 1) + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW]
     [current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW].weight = HIGHWAY_WEIGHT;
     threadville_resources.threadville_graph[(current_column + 1) + MATRIX_COLUMNS * (FIRST_HIGHWAY_ROW + 1)]
     [current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW].weight = HIGHWAY_WEIGHT;
+
+    printf("%d -> %d\n", (current_column + 1) + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW, current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
+    printf("%d -> %d\n", (current_column + 1) + MATRIX_COLUMNS * (FIRST_HIGHWAY_ROW + 1), current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
 
     // Add north-to-south road (Z)
     current_column = roads_north_to_south[ROAD_NORTH_TO_SOUTH_NUM - 1];
@@ -1027,28 +1125,37 @@ void* load_matrix_data(void *arg) {
         if (row < MATRIX_ROWS) {
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (row-1)]
             [current_column + MATRIX_COLUMNS * row].weight = HIGHWAY_WEIGHT;
+            printf("K: %d -> %d\n", current_column + MATRIX_COLUMNS * (row-1), current_column + MATRIX_COLUMNS * row);
         } else {
             // Connect roundabout most southern row to underground most northern row
             threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (row-1)]
             [current_column + MATRIX_COLUMNS * UNDERGROUND_MOST_NORTHERN_ROW].weight = HIGHWAY_WEIGHT;
+            printf("R: %d -> %d\n", current_column + MATRIX_COLUMNS * (row-1), current_column + MATRIX_COLUMNS * UNDERGROUND_MOST_NORTHERN_ROW);
         }
     }
-    // Connect uptown most southern row to roundabout most northen row
+    // Connect uptown most southern row to roundabout most northern row
     printf("[INIT] CURRENT[row: %d, column %d], DESTINATION[row: %d, column: %d]\n", UPTOWN_MOST_SOUTHERN_ROW, current_column, FIRST_HIGHWAY_ROW, current_column);
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * UPTOWN_MOST_SOUTHERN_ROW]
     [current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW].weight = HIGHWAY_WEIGHT;
+    printf("F: %d -> %d\n", current_column + MATRIX_COLUMNS * UPTOWN_MOST_SOUTHERN_ROW, current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
 
     // Connect west-to-east highway to roundabout most southern
     threadville_resources.threadville_graph[(current_column - 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1)]
     [current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)].weight = HIGHWAY_WEIGHT;
-    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 2)]
+    threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 2) - 1]
     [current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1)].weight = HIGHWAY_WEIGHT;
+
+    printf("%d -> %d\n", (current_column - 1) + MATRIX_COLUMNS * (MATRIX_ROWS - 1), current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 2) - 1, current_column + MATRIX_COLUMNS * (MATRIX_ROWS - 1));
 
     // Connect roundabout most northern to east-to-west highway
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW]
     [(current_column - 1) + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW].weight = HIGHWAY_WEIGHT;
     threadville_resources.threadville_graph[current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW]
     [(current_column - 1) + MATRIX_COLUMNS * (FIRST_HIGHWAY_ROW + 1)].weight = HIGHWAY_WEIGHT;
+
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW, (current_column - 1) + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW);
+    printf("%d -> %d\n", current_column + MATRIX_COLUMNS * FIRST_HIGHWAY_ROW, (current_column - 1) + MATRIX_COLUMNS * (FIRST_HIGHWAY_ROW + 1));
 
     // UNDERGROUND
 
