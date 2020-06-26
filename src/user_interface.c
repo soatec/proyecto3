@@ -13,6 +13,8 @@
 #define WINDOW_HEIGHT 680
 #define RESOURCES_DIR "../resources/"
 #define BACKGROUND "../resources/background.png"
+#define LIGHT_RED "../resources/light_red.png"
+#define LIGHT_GREEN "../resources/light_green.png"
 
 // Global variables
 vehicle_list_t *cars;
@@ -25,6 +27,12 @@ SDL_Event window_event;
 
 SDL_Surface *city_background;
 SDL_Surface *vehicle_images[3][10][4];
+SDL_Surface *light_red;
+SDL_Surface *light_green;
+SDL_Rect curly_up_pos;
+SDL_Rect curly_down_pos;
+SDL_Rect shemp_up_pos;
+SDL_Rect shemp_down_pos;
 
 //==================
 void create_new_ambulance(){
@@ -123,7 +131,17 @@ int initialize_ui() {
     }
 
     city_background = IMG_Load(BACKGROUND);
+    light_red = IMG_Load(LIGHT_RED);
+    light_green = IMG_Load(LIGHT_GREEN);
     load_vehicle_images();
+    curly_up_pos.x = 380;
+    curly_up_pos.y = 280;
+    curly_down_pos.x = 440;
+    curly_down_pos.y = 380;
+    shemp_up_pos.x = 700;
+    shemp_up_pos.y = 280;
+    shemp_down_pos.x = 760;
+    shemp_down_pos.y = 380;
 
 
     // Init structures of lists
@@ -140,6 +158,8 @@ int initialize_ui() {
 void destroy_ui() {
     printf("%s\n", "Closing app...");
     free_vehicle_images();
+    SDL_FreeSurface(light_red);
+    SDL_FreeSurface(light_green);
     SDL_FreeSurface(city_background);
     SDL_FreeSurface(main_window_surface);
     SDL_DestroyWindow(main_window);
@@ -183,6 +203,23 @@ void update_vehicle_positions() {
         SDL_BlitSurface(get_vehicle_image(buses[bus]), NULL, main_window_surface, &buses[bus]->image_position);
         buses[bus]->image_position.x = buses[bus]->position.pos_x;
         buses[bus]->image_position.y = buses[bus]->position.pos_y;
+    }
+
+    char* directions[5] = {"NORTH", "SOUTH","EAST","WEST", "DIRECTION_MAX"};
+    //printf("%s\n", directions[]);
+    if (get_bridge_direction(CURLY)==NORTH) {
+        SDL_BlitSurface(light_green, NULL, main_window_surface, &curly_up_pos);
+        SDL_BlitSurface(light_red, NULL, main_window_surface, &curly_down_pos);
+    } else {
+        SDL_BlitSurface(light_red, NULL, main_window_surface, &curly_up_pos);
+        SDL_BlitSurface(light_green, NULL, main_window_surface, &curly_down_pos);
+    }
+    if (get_bridge_direction(SHEMP)==NORTH) {
+        SDL_BlitSurface(light_green, NULL, main_window_surface, &shemp_up_pos);
+        SDL_BlitSurface(light_red, NULL, main_window_surface, &shemp_down_pos);
+    } else {
+        SDL_BlitSurface(light_red, NULL, main_window_surface, &shemp_up_pos);
+        SDL_BlitSurface(light_green, NULL, main_window_surface, &shemp_down_pos);
     }
     SDL_UpdateWindowSurface(main_window);
 }
