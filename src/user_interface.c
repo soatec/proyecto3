@@ -13,20 +13,23 @@
 #define WINDOW_HEIGHT 680
 #define RESOURCES_DIR "../resources/"
 #define BACKGROUND "../resources/background.png"
+#define REPAIR "../resources/road_block.png"
 
 // Global variables
 vehicle_list_t *cars;
 vehicle_data_t *buses[BUSES_NUM];
 vehicle_list_t *ambulances;
 
+int repaired_index = 0;
+
 SDL_Window *main_window;
 SDL_Surface *main_window_surface;
 SDL_Event window_event;
 
 SDL_Surface *city_background;
+SDL_Surface *repair;
+SDL_Rect repair_image_pos;
 SDL_Surface *vehicle_images[3][10][4];
-
-int repaired_index = 0;
 
 //==================
 void create_new_ambulance(){
@@ -125,6 +128,7 @@ int initialize_ui() {
     }
 
     city_background = IMG_Load(BACKGROUND);
+    repair = IMG_Load(REPAIR);
     load_vehicle_images();
 
 
@@ -142,6 +146,7 @@ int initialize_ui() {
 void destroy_ui() {
     printf("%s\n", "Closing app...");
     free_vehicle_images();
+    SDL_FreeSurface(repair);
     SDL_FreeSurface(city_background);
     SDL_FreeSurface(main_window_surface);
     SDL_DestroyWindow(main_window);
@@ -149,7 +154,6 @@ void destroy_ui() {
 }
 
 void update_vehicle_positions() {
-    SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
     vehicle_node_t * current_vehicle = cars->vehicle_node;
     vehicle_node_t * temp_vehicle;
     while (current_vehicle != NULL) {
@@ -186,7 +190,12 @@ void update_vehicle_positions() {
         buses[bus]->image_position.x = buses[bus]->position.pos_x;
         buses[bus]->image_position.y = buses[bus]->position.pos_y;
     }
-    SDL_UpdateWindowSurface(main_window);
+}
+
+void update_repairs_position() {
+    repair_image_pos.x = (((int)(repaired_index / 48))*20)+100;
+    repair_image_pos.y = (repaired_index % 48)*20;
+    SDL_BlitSurface(repair, NULL, main_window_surface, &repair_image_pos);
 }
 
 //TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
@@ -213,19 +222,18 @@ void core_loop() {
     //create_new_ambulance();
     //create_new_ambulance();
 
-    while(keep_window_open)
-    {
-        while(SDL_PollEvent(&window_event) > 0)
-        {
-            switch(window_event.type)
-            {
+    while(keep_window_open) {
+        while(SDL_PollEvent(&window_event) > 0) {
+            switch(window_event.type) {
                 case SDL_QUIT:
                     keep_window_open = false;
                     break;
             }
         }
-        update_vehicle_positions();
-
+        SDL_BlitSurface(city_background, NULL, main_window_surface, NULL); // Draw background first
+        update_vehicle_positions(); // Draw vehicles
+        update_repairs_position(); // Draw repairs
+        SDL_UpdateWindowSurface(main_window); // Swap buffers to show new frame
     }
 }
 
