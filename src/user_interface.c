@@ -195,7 +195,11 @@ void update_vehicle_positions() {
 void update_repairs_position() {
     if (repaired_index!=-1) {
         repair_image_pos.x = (repaired_index % 48)*20+100;
-        repair_image_pos.y = (((int)(repaired_index / 48))*20);
+        if (repaired_index>=1632) {
+            repair_image_pos.y = (((int)(repaired_index / 48))*20)-380;
+        } else {
+            repair_image_pos.y = (((int)(repaired_index / 48))*20);
+        }
         SDL_BlitSurface(repair, NULL, main_window_surface, &repair_image_pos);
     }
 }
