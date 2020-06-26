@@ -51,6 +51,11 @@ void add_vehicle_to_list(vehicle_list_t *vehicle_list, vehicle_data_t *vehicle);
 
 /**
  *
+ */
+void delete_vehicle_from_list(vehicle_list_t *vehicle_list, vehicle_node_t *vehicle);
+
+/**
+ *
  * @param cell_list
  * @param weight
  */
@@ -62,6 +67,12 @@ void init_cell_list(cell_list_t *cell_list, int weight);
  * @param cell
  */
 void add_cell_to_list(cell_list_t *cell_list, cell_t cell);
+
+/**
+ *
+ * @param cell
+ */
+void destroy_cell_list(cell_list_t *list);
 
 /**
  * Gets an exponential random number

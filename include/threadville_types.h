@@ -199,6 +199,7 @@ typedef struct screen_position_data_t {
  * Vehicule data structure
  */
 typedef struct vehicle_data_t {
+    bool              finished;
     int               id;
     vehicule_type_e_t type;
     bool              active;

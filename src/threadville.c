@@ -788,7 +788,7 @@ void can_move(vehicle_data_t *vehicle, cell_list_t **current_lists, cell_node_t 
     if (current_cell_nodes[1]->next == NULL){
         *current_idx = (*current_idx + 1) % vehicle->destinations_num;
         *destination_idx = (*destination_idx + 1) % vehicle->destinations_num;
-        if (*current_idx == 0 && *destination_idx == 1) {
+        if (*current_idx == 0 && *destination_idx == 1 && vehicle->type == BUS){
             current_cell_nodes[0]->next = current_lists[0]->cell_node;
             free(current_cell_nodes[1]->next);
             current_cell_nodes[1] = current_cell_nodes[0]->next;
@@ -805,8 +805,8 @@ void can_move(vehicle_data_t *vehicle, cell_list_t **current_lists, cell_node_t 
             }
             current_cell_nodes[1]->next = current_lists[1]->cell_node->next;
             current_cell_nodes[1]->is_stop = true;
-            free(current_lists[1]);
             free(current_lists[1]->cell_node);
+            free(current_lists[1]);
         }
     }
     current_cell_nodes[3] = current_cell_nodes[1]->next;
@@ -897,11 +897,11 @@ void* move_vehicle(void *arg) {
         current_cells[0] = &current_cell_nodes[0]->cell;
         current_cells[1] = &current_cell_nodes[0]->next->cell;
 
-
         can_move(vehicle, current_lists, current_cell_nodes, current_cells, &current_idx, &destination_idx, needed_cells);
 
         printf("%d blocking: (%d, %d) \n", vehicle->id, current_cells[needed_cells - 1]->row, current_cells[needed_cells - 1]->column);
         printf("%d unblocking: (%d, %d) \n", vehicle->id, current_cells[0]->row, current_cells[0]->column);
+
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
         [current_cells[needed_cells - 1]->row][current_cells[needed_cells - 1]->column]);
         pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
@@ -909,6 +909,21 @@ void* move_vehicle(void *arg) {
 
         // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
         move(current_cells[0], current_cells[1], vehicle, 2);
+
+        if (current_idx == vehicle->destinations_num - 1 && destination_idx == 0 && vehicle->type != BUS) {
+            error_check = pthread_mutex_destroy(&vehicle->mutex);
+            if (error_check != 0) {
+                fprintf(stderr, "Error executing pthread_mutex_destroy. (Errno %d: %s)\n",
+                        errno, strerror(errno));
+            }
+            free(vehicle->destinations);
+            pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
+            [current_cells[needed_cells - 1]->row][current_cells[needed_cells - 1]->column]);
+            destroy_cell_list(current_lists[0]);
+            vehicle->finished = true;
+            pthread_exit(NULL);
+        }
+
         current_cell_nodes[0] = current_cell_nodes[0]->next;
     }
 
@@ -917,15 +932,43 @@ void* move_vehicle(void *arg) {
 
 void get_random_destinations(vehicle_data_t *vehicle, int destinations_num){
     if (destinations_num == -1) {
-        destinations_num = get_random(1, 10);
+        destinations_num = get_random(1, 10) + 2;
+        //destinations_num = 2;
     }
-    vehicle->destinations = malloc(sizeof(destination_t) * destinations_num);
-    vehicle->destinations_num = 2;
-    for (int i = 0; i < destinations_num; i++){
-
+    vehicle->destinations = malloc(sizeof(destination_t) * (destinations_num));
+    vehicle->destinations_num = destinations_num;
+    vehicle->destinations[0].destination_type = ROUNDABOUT;
+    vehicle->destinations[0].destination.roundabout = Y;
+    vehicle->destinations[destinations_num - 1].destination_type = ROUNDABOUT;
+    vehicle->destinations[destinations_num - 1].destination.roundabout = Z;
+    for (int i = 1; i < destinations_num - 1; i++){
         vehicle->destinations[i].destination_type = STOP;
-        vehicle->destinations[i].destination.stop.block = get_random(0, BLOCK_MAX - 1);
-        vehicle->destinations[i].destination.stop.stop = get_random(0, STOP_MAX - 1);
+        vehicle->destinations[i].destination.stop.block = get_random(A, X);
+        switch (vehicle->destinations[i].destination.stop.block){
+            case A:
+            case B:
+            case C:
+            case D:
+            case E:
+            case F:
+            case S:
+            case T:
+            case U:
+            case V:
+            case W:
+            case X:
+                vehicle->destinations[i].destination.stop.stop = get_random(ONE, EIGHT);
+                while(vehicle->destinations[i].destination.stop.stop == vehicle->destinations[i - 1].destination.stop.stop){
+                    vehicle->destinations[i].destination.stop.stop = get_random(ONE, EIGHT);
+                }
+                break;
+            default:
+                vehicle->destinations[i].destination.stop.stop = get_random(ONE, SIX);
+                while(vehicle->destinations[i].destination.stop.stop == vehicle->destinations[i - 1].destination.stop.stop){
+                    vehicle->destinations[i].destination.stop.stop = get_random(ONE, SIX);
+                }
+        }
+
         printf("BLOQUE: %d. PARADA: %d\n", vehicle->destinations[i].destination.stop.block, vehicle->destinations[i].destination.stop.stop);
     }
 }
@@ -970,12 +1013,13 @@ void new_vehicle(vehicle_data_t *vehicle) {
                 get_random_destinations(vehicle, -1);
             }
             vehicle->color = cars_color[get_random(0, CARS_COLORS - 1)];
-            vehicle->direction = 1;
             break;
         case AMBULANCE:
-            get_random_destinations(vehicle, 2);
+            get_random_destinations(vehicle, 4);
+            vehicle->color = 0;
     }
 
+    vehicle->finished = false;
     error_check = pthread_mutex_init(&vehicle->mutex, NULL);
     if (error_check != 0) {
         fprintf(stderr, "Error executing pthread_mutex_init. (Errno %d: %s)\n",
