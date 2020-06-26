@@ -435,6 +435,11 @@ typedef struct bridge_data_t {
 
 bridge_data_t bridges_data[BRIDGE_MAX];
 
+// PUBLIC FUNCTIONS
+direction_e_t get_bridge_direction(bridge_e_t bridge) {
+    bridge_data_t bridge_data = bridges_data[bridge];
+    return bridge_data.timer_ctrl.direction;
+}
 
 // PRIVATE FUNCTIONS
 
