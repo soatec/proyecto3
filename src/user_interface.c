@@ -246,9 +246,6 @@ void core_loop() {
     create_new_ambulance();
     create_new_ambulance();
 
-
-
-
     while(keep_window_open)
     {
         while(SDL_PollEvent(&window_event) > 0)

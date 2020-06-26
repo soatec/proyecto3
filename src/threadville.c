@@ -18,7 +18,8 @@
 #define MATRIX_COLUMNS 48
 #define NODES_NUM MATRIX_ROWS * MATRIX_COLUMNS
 
-#define RED_BUS_DESTINATIONS 12
+//#define RED_BUS_DESTINATIONS 12
+#define RED_BUS_DESTINATIONS 2
 #define GREEN_BUS_DESTINATIONS 6
 #define BLUE_BUS_DESTINATIONS 6
 #define WHITE_BUS_DESTINATIONS 6
@@ -40,9 +41,9 @@
 #define UNDERGROUND_MOST_NORTHERN_ROW 20
 #define FIRST_HIGHWAY_ROW 34
 
-#define BUS_TIME_SECS 1
-#define CAR_TIME_SECS 1
-#define AMBULANCE_TIME_SECS 1
+#define BUS_TIME_SECS 5
+#define CAR_TIME_SECS 3
+#define AMBULANCE_TIME_SECS 8
 
 // Traffic should prefer to use the highway
 #define HIGHWAY_WEIGHT 1
@@ -92,17 +93,19 @@ typedef struct threadville_resources_t {
 
 destination_t destinations_red_bus[RED_BUS_DESTINATIONS] = {
         {STOP, {.stop={A, ONE}}},
-        {STOP, {.stop={D, ONE}}},
         {STOP, {.stop={F, TWO}}},
-        {STOP, {.stop={L, FOUR}}},
-        {ROUNDABOUT, {.roundabout=Z}},
-        {STOP, {.stop={R, TWO}}},
-        {STOP, {.stop={X, FIVE}}},
-        {STOP, {.stop={U, FIVE}}},
-        {STOP, {.stop={S, SIX}}},
-        {STOP, {.stop={M, ONE}}},
-        {ROUNDABOUT, {.roundabout=Y}},
-        {STOP, {.stop={G, FIVE}}}
+        //{STOP, {.stop={A, ONE}}},
+        //{STOP, {.stop={D, ONE}}},
+        //{STOP, {.stop={F, TWO}}},
+        //{STOP, {.stop={L, FOUR}}},
+        //{ROUNDABOUT, {.roundabout=Z}},
+        //{STOP, {.stop={R, TWO}}},
+        //{STOP, {.stop={X, FIVE}}},
+        //{STOP, {.stop={U, FIVE}}},
+        //{STOP, {.stop={S, SIX}}},
+        //{STOP, {.stop={M, ONE}}},
+        //{ROUNDABOUT, {.roundabout=Y}},
+        //{STOP, {.stop={G, FIVE}}}
 };
 
 destination_t destinations_green_bus[GREEN_BUS_DESTINATIONS] = {
@@ -747,7 +750,7 @@ void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle, int 
         }
         vehicle->position.pos_x = current_x;
         vehicle->position.pos_y = current_y;
-        usleep(1000 * micro_seconds);
+        usleep(micro_seconds);
     }
 }
 
@@ -908,7 +911,7 @@ void* move_vehicle(void *arg) {
         [current_cells[0]->row][current_cells[0]->column]);
 
         // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
-        move(current_cells[0], current_cells[1], vehicle, 2);
+        move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
 
         if (current_idx == vehicle->destinations_num - 1 && destination_idx == 0 && vehicle->type != BUS) {
             error_check = pthread_mutex_destroy(&vehicle->mutex);
@@ -973,6 +976,57 @@ void get_random_destinations(vehicle_data_t *vehicle, int destinations_num){
     }
 }
 
+int get_time_to_wait(vehicle_data_t *vehicle) {
+    float seconds;
+    switch (vehicle->type){
+        case CAR:
+            switch (vehicle->color){
+                case RED:
+                    seconds = 1;
+                    break;
+                case BLUE:
+                    seconds = 2;
+                    break;
+                case GREEN:
+                    seconds = 3;
+                    break;
+                case BLACK:
+                    seconds = 4;
+                    break;
+                case WHITE:
+                    seconds = 5;
+                    break;
+                case YELLOW:
+                    seconds = 6;
+            }
+            break;
+        case BUS:
+            switch (vehicle->color){
+                case ORANGE:
+                    seconds = 7;
+                    break;
+                case PINK:
+                case LIGHT_BLUE:
+                    seconds = 3;
+                    break;
+                case WHITE:
+                case BLACK:
+                case GRAY:
+                    seconds = 4;
+                    break;
+                case RED:
+                case GREEN:
+                case BLUE:
+                    seconds = 5;
+            }
+            break;
+        case AMBULANCE:
+            seconds = 0.5;
+    }
+    int time = 1000000 * seconds / (44 * 20);
+    return time;
+}
+
 // Public functions
 
 void new_car(vehicle_data_t *car) {
@@ -1018,6 +1072,7 @@ void new_vehicle(vehicle_data_t *vehicle) {
             get_random_destinations(vehicle, 4);
             vehicle->color = 0;
     }
+    vehicle->time_to_wait = get_time_to_wait(vehicle);
 
     vehicle->finished = false;
     error_check = pthread_mutex_init(&vehicle->mutex, NULL);

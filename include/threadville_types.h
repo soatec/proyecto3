@@ -208,6 +208,7 @@ typedef struct vehicle_data_t {
     direction_e_t     direction;
     color_e_t         color;
     // If this is a car and destinations_num = 0, destinations will be random
+    int               time_to_wait;
     int               destinations_num;
     destination_t    *destinations;
     pthread_t         thread;
