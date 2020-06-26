@@ -196,7 +196,7 @@ void disable_white_bus(){
 void core_loop() {
     bool keep_window_open = true;
 
-    create_new_bus(RED);
+    //create_new_bus(RED);
     //create_new_bus(GREEN);
     //create_new_bus(BLUE);
     //create_new_bus(WHITE);
@@ -205,11 +205,60 @@ void core_loop() {
     //create_new_bus(PINK);
     //create_new_bus(LIGHT_BLUE);
     //create_new_bus(ORANGE);
-    //create_new_random_car();
-    //create_new_random_car();
-    //create_new_ambulance();
-    //create_new_ambulance();
-    //create_new_ambulance();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+    create_new_random_car();
+
+    create_new_ambulance();
+    create_new_ambulance();
+    create_new_ambulance();
 
     while(keep_window_open)
     {
