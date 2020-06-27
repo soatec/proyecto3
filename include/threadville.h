@@ -2,6 +2,7 @@
 #define PROYECTO3_THREADVILLE_H
 
 #include "threadville_types.h"
+#include "user_interface.h"
 
 /**
  * Creates a new vehicle
@@ -114,5 +115,7 @@ void enable_bus(vehicle_data_t *bus);
  * @param bus
  */
 direction_e_t get_bridge_direction(bridge_e_t bridge);
+
+void* plan_reparations(void *arg);
 
 #endif //PROYECTO3_THREADVILLE_H

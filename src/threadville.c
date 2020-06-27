@@ -372,6 +372,20 @@ cell_list_t *get_path(cell_t actual, cell_t destination) {
     return cell_list;
 }
 
+/**
+ * Copies an existing graph into another existing graph
+ *
+ * @param og_graph the original graph
+ * @param copy_graph the graph to be updated
+ */
+void copy_graph(graph_node_t og_graph[NODES_NUM][NODES_NUM], graph_node_t copy_graph[NODES_NUM][NODES_NUM]){
+  for(int i = 0; i < NODES_NUM ; i++){
+    for(int j = 0; j < NODES_NUM ; j++){
+      copy_graph[i][j] = og_graph[i][j];
+    }
+  }
+}
+
 // ENUMS AND STRUCTS
 
 /*
@@ -1237,6 +1251,7 @@ void* load_matrix_data(void *arg) {
     int current_column;
     int last_road_chunk;
     int first_bridge_chunk;
+    repaired_index = -1;
 
     srand((unsigned int)time(NULL));
     for (int row = 0; row < NODES_NUM; row++){
@@ -2204,4 +2219,87 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
   return status;
+}
+
+void repair_cell(int index){
+  int error_check;
+  int time_for_repair = exponential_random(40);
+  int repair_duration = get_random(1,3)*5;
+  printf("Time for next repair: %i\n", time_for_repair);
+  sleep(time_for_repair);
+
+  int row = index / MATRIX_COLUMNS;
+  int column = index - MATRIX_COLUMNS*row;
+
+  error_check = pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes[row][column]);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+  printf("repairing %i node for %i seconds\n", index, repair_duration);
+  repaired_index = index;
+  sleep(repair_duration);
+  repaired_index = -1;
+  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+
+  printf("FINISHED REPAIRED BLOCK\n");
+
+}
+
+void* plan_reparations(void *arg){
+
+  int error_check;
+  if (!threadville_resources.init_done) {
+    error_check = pthread_mutex_lock(&threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_lock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+    }
+    error_check = pthread_cond_wait(&threadville_resources.init_thread_done, &threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_cond_wait. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+    error_check = pthread_mutex_unlock(&threadville_resources.mutex);
+    if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
+  }
+  while(1){
+    int index = random_viable_index();
+    repair_cell(index);
+  }
+}
+
+int random_viable_index(){
+  int row;
+  int column;
+
+  if ( get_random(1,2) < 2 ) {
+    row = get_random(0, 3);
+    if(row < 2 ){
+      row = roads_east_to_west_rows[row];
+    } else {
+      row = roads_west_to_east_rows[row%2];
+    }
+    column = get_random(0,47);
+  } else {
+    column = get_random(0,11);
+    if( column < 6 ){
+      column = roads_south_to_north[column];
+    } else {
+      column = roads_north_to_south[column%6];
+    }
+    row = get_random(0,27);
+    if ( row > 13 ){
+      row += 6;
+    }
+  }
+  int index = row*MATRIX_COLUMNS + column;
+  return index;
 }

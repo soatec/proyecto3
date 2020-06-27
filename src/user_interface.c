@@ -15,17 +15,22 @@
 #define BACKGROUND "../resources/background.png"
 #define LIGHT_RED "../resources/light_red.png"
 #define LIGHT_GREEN "../resources/light_green.png"
+#define REPAIR "../resources/road_block.png"
 
 // Global variables
 vehicle_list_t *cars;
 vehicle_data_t *buses[BUSES_NUM];
 vehicle_list_t *ambulances;
 
+int repaired_index = 0;
+
 SDL_Window *main_window;
 SDL_Surface *main_window_surface;
 SDL_Event window_event;
 
 SDL_Surface *city_background;
+SDL_Surface *repair;
+SDL_Rect repair_image_pos;
 SDL_Surface *vehicle_images[3][10][4];
 SDL_Surface *light_red;
 SDL_Surface *light_green;
@@ -133,6 +138,7 @@ int initialize_ui() {
     city_background = IMG_Load(BACKGROUND);
     light_red = IMG_Load(LIGHT_RED);
     light_green = IMG_Load(LIGHT_GREEN);
+    repair = IMG_Load(REPAIR);
     load_vehicle_images();
     curly_up_pos.x = 380;
     curly_up_pos.y = 280;
@@ -160,6 +166,7 @@ void destroy_ui() {
     free_vehicle_images();
     SDL_FreeSurface(light_red);
     SDL_FreeSurface(light_green);
+    SDL_FreeSurface(repair);
     SDL_FreeSurface(city_background);
     SDL_FreeSurface(main_window_surface);
     SDL_DestroyWindow(main_window);
@@ -167,7 +174,6 @@ void destroy_ui() {
 }
 
 void update_vehicle_positions() {
-    SDL_BlitSurface(city_background, NULL, main_window_surface, NULL);
     vehicle_node_t * current_vehicle = cars->vehicle_node;
     vehicle_node_t * temp_vehicle;
     while (current_vehicle != NULL) {
@@ -222,6 +228,18 @@ void update_vehicle_positions() {
         SDL_BlitSurface(light_green, NULL, main_window_surface, &shemp_down_pos);
     }
     SDL_UpdateWindowSurface(main_window);
+}
+
+void update_repairs_position() {
+    if (repaired_index!=-1) {
+        repair_image_pos.x = (repaired_index % 48)*20+100;
+        if (repaired_index>=1632) {
+            repair_image_pos.y = (((int)(repaired_index / 48))*20)-380;
+        } else {
+            repair_image_pos.y = (((int)(repaired_index / 48))*20);
+        }
+        SDL_BlitSurface(repair, NULL, main_window_surface, &repair_image_pos);
+    }
 }
 
 //TODO: Para activar o desactivar un bus llamar las funciones enable_bus/disable_bus
@@ -298,20 +316,18 @@ void core_loop() {
     create_new_ambulance();
     create_new_ambulance();
 
-
-    while(keep_window_open)
-    {
-        while(SDL_PollEvent(&window_event) > 0)
-        {
-            switch(window_event.type)
-            {
+    while(keep_window_open) {
+        while(SDL_PollEvent(&window_event) > 0) {
+            switch(window_event.type) {
                 case SDL_QUIT:
                     keep_window_open = false;
                     break;
             }
         }
-        update_vehicle_positions();
-
+        SDL_BlitSurface(city_background, NULL, main_window_surface, NULL); // Draw background first
+        update_vehicle_positions(); // Draw vehicles
+        update_repairs_position(); // Draw repairs
+        SDL_UpdateWindowSurface(main_window); // Swap buffers to show new frame
     }
 }
 
