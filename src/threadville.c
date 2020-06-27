@@ -2222,56 +2222,29 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
 }
 
 void repair_cell(int index){
-  clock_t t;
   int error_check;
   int time_for_repair = exponential_random(40);
-  printf("Time for next repair: %i\n", time_for_repair);
-
   int repair_duration = get_random(1,3)*5;
-  
-  t = clock();
-  get_previous_connections(index);
-  disable_cell(index);
-  recalculate_weight();
-  t = clock() - t;
-  double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
-  printf("Floyd took %f seconds to recalculate\n", time_taken);
+  printf("Time for next repair: %i\n", time_for_repair);
+  sleep(time_for_repair);
 
-  if(time_taken < time_for_repair){
-    sleep(time_for_repair-time_taken);
-  }
+  int row = index / MATRIX_COLUMNS;
+  int column = index - MATRIX_COLUMNS*row;
 
-  error_check = pthread_mutex_lock(&threadville_resources.mutex);
-  if (error_check != 0) {
-      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
-              errno, strerror(errno));
-  }
-  copy_graph(temp_graph, threadville_resources.threadville_graph);
-  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
-  if (error_check != 0) {
-      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
-              errno, strerror(errno));
-  }
-
-  repaired_index = index;
-
-  printf("repairing %i node for %i seconds\n", index, repair_duration);
   error_check = pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes[row][column]);
   if (error_check != 0) {
       fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
               errno, strerror(errno));
   }
+  printf("repairing %i node for %i seconds\n", index, repair_duration);
   repaired_index = index;
   sleep(repair_duration);
   repaired_index = -1;
-  error_check = pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes[row][column]);
+  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
   if (error_check != 0) {
       fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
               errno, strerror(errno));
   }
-
-  restore_previous_connections(temp_graph, index);
-
 
   printf("FINISHED REPAIRED BLOCK\n");
 
@@ -2298,28 +2271,35 @@ void* plan_reparations(void *arg){
     }
   }
   while(1){
-    int row;
-    int column;
-
-    if ( get_random(1,2) < 2 ) {
-      row = get_random(0, 7);
-      if(row < 4 ){
-        row = roads_east_to_west_rows[row];
-      } else {
-        row = roads_west_to_east_rows[row%4];
-      }
-      column = get_random(0,47);
-    } else {
-      column = get_random(0,11);
-      if( column < 6 ){
-        column = roads_south_to_north[column];
-      } else {
-        column = roads_north_to_south[column%6];
-      }
-      row = get_random(0,37);
-    }
-
-    int index = row*MATRIX_COLUMNS + column;
+    int index = random_viable_index();
     repair_cell(index);
   }
+}
+
+int random_viable_index(){
+  int row;
+  int column;
+
+  if ( get_random(1,2) < 2 ) {
+    row = get_random(0, 3);
+    if(row < 2 ){
+      row = roads_east_to_west_rows[row];
+    } else {
+      row = roads_west_to_east_rows[row%2];
+    }
+    column = get_random(0,47);
+  } else {
+    column = get_random(0,11);
+    if( column < 6 ){
+      column = roads_south_to_north[column];
+    } else {
+      column = roads_north_to_south[column%6];
+    }
+    row = get_random(0,27);
+    if ( row > 13 ){
+      row += 6;
+    }
+  }
+  int index = row*MATRIX_COLUMNS + column;
+  return index;
 }
