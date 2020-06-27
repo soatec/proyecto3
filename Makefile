@@ -4,6 +4,7 @@ SOURCE_DIR  := ./src
 INCLUDE_DIR := ./include
 BUILD_DIR   := ./build
 TEST_DIR    := ./test
+KISS_DIR	:= ./kiss_sdl
 BASE_DIR 		:= $(PWD)
 
 CC        := gcc
@@ -17,9 +18,9 @@ OBJECTS 		  = $(SOURCES:$(SOURCE_DIR)/%.c=$(BUILD_DIR)/%.o)
 TESTS   		  = $(wildcard $(TEST_DIR)/*.c)
 TEST_OBJECTS  = $(TESTS:$(TEST_DIR)/%.c=$(BUILD_DIR)/test/%.o)
 KISS_LIST    := kiss_widgets.o kiss_draw.o kiss_general.o kiss_posix.o
-KISS_OBJECTS := $(KISS_LIST:%.o=$(INCLUDE_DIR)/kiss_sdl/%.o)
-UI_RESOURCES := $(wildcard $(INCLUDE_DIR)/kiss_sdl/*.png)
-UI_RESOURCES += $(wildcard $(INCLUDE_DIR)/kiss_sdl/*.ttf)
+KISS_OBJECTS := $(KISS_LIST:%.o=$(KISS_DIR)/%.o)
+UI_RESOURCES := $(wildcard $(KISS_DIR)//*.png)
+UI_RESOURCES += $(wildcard $(KISS_DIR)/*.ttf)
 
 
 .PHONY: all
@@ -27,7 +28,7 @@ all: $(BUILD_DIR) $(BUILD_DIR)/$(TARGET) $(BUILD_DIR)/test/$(TARGET)
 
 
 $(BUILD_DIR)/$(TARGET): $(KISS_OBJECTS) $(OBJECTS)
-	cd $(INCLUDE_DIR)/kiss_sdl && $(MAKE) -f kiss_makefile
+	cd $(KISS_DIR) && $(MAKE) -f kiss_makefile
 	cd $(BASE_DIR)
 	cp $(UI_RESOURCES) $(BUILD_DIR)
 	$(CC) $(KISS_OBJECTS) $(OBJECTS) -o $@ $(LDFLAGS)
@@ -47,5 +48,5 @@ $(BUILD_DIR):
 
 .PHONY: clean
 clean:
-	cd $(INCLUDE_DIR)/kiss_sdl && $(MAKE) -f kiss_makefile clean
+	cd $(KISS_DIR) && $(MAKE) -f kiss_makefile clean
 	rm -rf $(BUILD_DIR)

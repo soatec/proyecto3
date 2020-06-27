@@ -5,7 +5,7 @@
 #include "utils.h"
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_image.h>
-#include "kiss_sdl/kiss_sdl.h"
+#include "../kiss_sdl/kiss_sdl.h"
 
  //sudo apt-get install libsdl2-ttf-dev
 
