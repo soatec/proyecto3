@@ -2227,7 +2227,7 @@ void repair_cell(int index){
   int time_for_repair = exponential_random(40);
   printf("Time for next repair: %i\n", time_for_repair);
 
-  int repair_duration = get_random(1,3)*;
+  int repair_duration = get_random(1,3)*5;
   
   t = clock();
   get_previous_connections(index);
