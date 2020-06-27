@@ -488,8 +488,6 @@ void* bridge_timer(void *arg) {
     if(bridge_data->cars_quantity < bridge_data->capacity) {
       if(bridge_data->timer_ctrl.direction == NORTH) {
         if (timer_count_s < bridge_data->timer_ctrl.north_timeout) {
-          printf("[Bridge] Sending signal to vehicule at north entrance of bridge %d\n",
-                 bridge_data->id);
           status = pthread_cond_signal(
             &bridge_data->north_entrance_traffic_ctrl
           );
@@ -505,8 +503,6 @@ void* bridge_timer(void *arg) {
         }
       } else {
         if (timer_count_s < bridge_data->timer_ctrl.south_timeout) {
-          printf("[Bridge] Sending signal to vehicule at south entrance of bridge %d\n",
-                 bridge_data->id);
           status = pthread_cond_signal(
             &bridge_data->south_entrance_traffic_ctrl
           );
@@ -587,7 +583,6 @@ cell_t get_old_cell_pos_int(cell_t cell){
 }
 
 position_t get_pos(cell_t cell, vehicle_data_t *vehicle, bool new_destination){
-	printf("cell.row %d cell.column %d\n", cell.row, cell.column);
     position_t position;
     cell_t old_cell;
     position.pos_x = cell.column * threadville_resources.screen_position_data.height_car +
@@ -606,7 +601,6 @@ position_t get_pos(cell_t cell, vehicle_data_t *vehicle, bool new_destination){
         	position.pos_y -= HIGHWAY_Y_OFFSET_ROWS * threadville_resources.screen_position_data.height_car;
         	break;
         case ROUNDABOUT_CELL:
-        	fprintf(stderr, "vehicle->roundabout_position %d\n", vehicle->roundabout_position);
 			vehicle->direction = roundabout_y.direction_per_cell[vehicle->roundabout_position];
 			if (cell.column == 0) {
 			  position.pos_x = trunc(roundabout_y.cx * threadville_resources.screen_position_data.height_car +
@@ -681,7 +675,6 @@ void enter_bridge(int bridge_id, vehicle_data_t *vehicle){
 
 void exit_bridge(int bridge_id, vehicle_data_t *vehicle){
     int status = 0;
-    printf("[Car %d] At the exit of bridge: %d, direction: %d\n", vehicle->id, bridge_id, vehicle->direction);
     switch (bridge_id) {
         case JOE:
         case LARRY:
@@ -722,11 +715,9 @@ void check_bridge_interaction(cell_t current_cell, cell_t dest_cell, vehicle_dat
     }
     if ((dest_cell.row == first_bridge.row && vehicle->direction == SOUTH) ||
         (dest_cell.row == first_bridge.row + BRIDGE_SIZE - 1 && vehicle->direction == NORTH)){
-        printf("------------------> %d enters bridge %d before moving to (%d, %d)\n", vehicle->id, bridge_id, dest_cell.row, dest_cell.column);
         enter_bridge(bridge_id, vehicle);
     } else if ((dest_cell.row == first_bridge.row - 1 && vehicle->direction == NORTH) ||
                (dest_cell.row == first_bridge.row + BRIDGE_SIZE && vehicle->direction == SOUTH)) {
-        printf("------------------> %d exits bridge %d before moving to (%d, %d)\n", vehicle->id, bridge_id, dest_cell.row, dest_cell.column);
         exit_bridge(bridge_id, vehicle);
     }
 }
@@ -1007,7 +998,7 @@ void* move_vehicle(void *arg) {
 
     current_lists[0] = get_path(get_cell(&vehicle->destinations[current_idx]), get_cell(&vehicle->destinations[destination_idx]));
     if (current_lists[0]->weight == INF){
-        printf("ERROR! NO HAY RUTA ENTRE (%d, %d) y (%d, %d)\n",
+        printf("Error. No route for (%d, %d) -> (%d, %d)\n",
                 vehicle->destinations[current_idx].destination.stop.block,
                 vehicle->destinations[current_idx].destination.stop.stop,
                vehicle->destinations[destination_idx].destination.stop.block,
@@ -1020,7 +1011,6 @@ void* move_vehicle(void *arg) {
 
     for (int i = 0; i < needed_cells - 1; i++){
         fixed_cell = get_old_cell_pos_int(current_cell_nodes[i]->cell);
-        //printf("%d blocking: (%d, %d) \n", vehicle->id, fixed_cell.row, fixed_cell.column);
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
         [fixed_cell.row][fixed_cell.column]);
     }
@@ -1038,8 +1028,6 @@ void* move_vehicle(void *arg) {
 
         can_move(vehicle, current_lists, current_cell_nodes, current_cells, &current_idx, &destination_idx, needed_cells);
 
-        //printf("%d blocking: (%d, %d) \n", vehicle->id, current_cells[needed_cells - 1]->row, current_cells[needed_cells - 1]->column);
-        //printf("%d unblocking: (%d, %d) \n", vehicle->id, current_cells[0]->row, current_cells[0]->column);
 
         fixed_cell = get_old_cell_pos_int(*current_cells[needed_cells - 1]);
         pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes
@@ -1048,7 +1036,6 @@ void* move_vehicle(void *arg) {
         pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes
         [fixed_cell.row][fixed_cell.column]);
 
-        // printf("SIGUIENTE. FILA: %d. COLUMNA: %d\n", current_cells[0]->row, current_cells[0]->column);
         move(current_cells[0], current_cells[1], vehicle, vehicle->time_to_wait);
 
         if (current_idx == vehicle->destinations_num - 1 && destination_idx == 0 && vehicle->type != BUS) {
@@ -1566,7 +1553,7 @@ void* load_matrix_data(void *arg) {
     }
     t = clock() - t;
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
-    printf("Floyd took %f seconds to execute\n", time_taken);
+    printf("Floyd took %f seconds to execute.\n", time_taken);
 
     pthread_mutex_lock(&threadville_resources.mutex);
     pthread_cond_broadcast(&threadville_resources.init_thread_done);
@@ -1576,7 +1563,7 @@ void* load_matrix_data(void *arg) {
 
     t_total = clock() - t_total;
     time_taken = ((double)t_total)/CLOCKS_PER_SEC; // calculate the elapsed time
-    printf("The program took %f seconds to execute\n", time_taken);
+    printf("The simulation took %f seconds to initialize.\n", time_taken);
 
     pthread_exit(NULL);
 }
@@ -1609,10 +1596,16 @@ void set_screen_position_data(screen_position_data_t screen_position_data){
     pthread_t thread;
 
     error_check = initialize_bridges(1, 5, 5);
-    printf("STATUS: initialize_bridges %d\n", error_check);
+    if (error_check != 0) {
+        fprintf(stderr, "Error executing initialize_bridges. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
 
     error_check = initialize_roundabout();
-    printf("STATUS: initialize_roundabout %d\n", error_check);
+    if (error_check != 0) {
+        fprintf(stderr, "Error executing initialize_bridges. (Errno %d: %s)\n",
+                errno, strerror(errno));
+    }
 
     error_check = pthread_create(&thread, NULL, load_matrix_data, NULL);
     if (error_check != 0) {
@@ -1835,9 +1828,7 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_cond_t *entrance_cond;
   int cars_entrance;
 
-  printf("ENTERED %d BEFORE MUTEX\n", vehicle->id);
   pthread_mutex_lock(&bridges_data[bridge_id].mutex);
-  printf("ENTERED %d AFTER MUTEX\n", vehicle->id);
 
   switch (vehicle->direction) {
     case SOUTH:
@@ -1845,7 +1836,6 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       switch (vehicle->type) {
         case CAR:
         case AMBULANCE:
-          printf("ENTERED %d GOES SOUTH\n", vehicle->id);
           bridges_data[bridge_id].cars_north_entrance += 1;
           break;
         case BUS:
@@ -1863,7 +1853,6 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       switch (vehicle->type) {
         case CAR:
         case AMBULANCE:
-            printf("ENTERED %d GOES NORTH\n", vehicle->id);
           bridges_data[bridge_id].cars_south_entrance += 1;
           break;
         case BUS:
@@ -1882,7 +1871,6 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       return EINVAL;
   }
 
-  fprintf(stderr, "BRIDGE DIRECTION %d, CARS ENTRANCE %d\n", bridges_data[bridge_id].timer_ctrl.direction, cars_entrance);
   if ((bridges_data[bridge_id].timer_ctrl.direction == DIRECTION_MAX) &&
       (cars_entrance >= bridges_data[bridge_id].capacity)) {
     bridges_data[bridge_id].timer_ctrl.direction = vehicle->direction;
@@ -1893,15 +1881,11 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
 
   // Vehicule must wait if there are cars crossing in the opposite direction or
   // the bridge is full
-    printf("BRIDGE DIRECTION: %d, CARS_QUANTITY %d\n",  bridges_data[bridge_id].timer_ctrl.direction, bridges_data[bridge_id].cars_quantity);
-    printf("ENTERED %d BEFORE pthread_cond_wait\n", vehicle->id);
     while ((vehicle->direction != bridges_data[bridge_id].timer_ctrl.direction) ||
            (bridges_data[bridge_id].cars_quantity == bridges_data[bridge_id].capacity)) {
-        printf("ENTERED %d DURING 1 pthread_cond_wait\n", vehicle->id);
         status = pthread_cond_wait(entrance_cond, &bridges_data[bridge_id].mutex);
         fprintf(stderr, "%s %d (status: %d)\n", __FUNCTION__, __LINE__, status);
         if (status) return status;
-        printf("ENTERED %d DURING 2 pthread_cond_wait \n", vehicle->id);
 
 
         // If the bridge is empty, the vehicule is allowed to cross
@@ -1909,7 +1893,6 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
             bridges_data[bridge_id].timer_ctrl.direction = vehicle->direction;
         }
     }
-    printf("ENTERED %d AFTER pthread_cond_wait\n", vehicle->id);
 
   switch (vehicle->type) {
     case CAR:
@@ -1948,9 +1931,6 @@ int external_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
               vehicle->type);
       return EINVAL;
   }
-
-  fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
-
 
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
@@ -2001,8 +1981,6 @@ int external_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
               vehicle->direction);
       return EINVAL;
   }
-
-    fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
 
     if (entrance_cond != NULL) {
         bridges_data[bridge_id].timer_ctrl.direction = DIRECTION_MAX;
@@ -2068,8 +2046,6 @@ int internal_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       return EINVAL;
   }
 
-  fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
-
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
   return status;
@@ -2093,8 +2069,6 @@ int internal_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
               vehicle->type);
       return EINVAL;
   }
-
-  fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
 
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
@@ -2155,8 +2129,6 @@ int middle_bridge_enter(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       return EINVAL;
   }
 
-  fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
-
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
   return status;
@@ -2205,8 +2177,6 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
       return EINVAL;
   }
 
-  fprintf(stderr, "[Bridge %d] Cars quantity %d\n", bridge_id, bridges_data[bridge_id].cars_quantity);
-
   // If the bridge is empty, direction should be set to max and cars in the
   // opposite direction should be signaled
   if (bridges_data[bridge_id].cars_quantity == 0) {
@@ -2250,6 +2220,34 @@ void repair_cell(int index){
 
 }
 
+int random_viable_index(){
+    int row;
+    int column;
+
+    if ( get_random(1,2) < 2 ) {
+        row = get_random(0, 3);
+        if(row < 2 ){
+            row = roads_east_to_west_rows[row];
+        } else {
+            row = roads_west_to_east_rows[row%2];
+        }
+        column = get_random(0,47);
+    } else {
+        column = get_random(0,11);
+        if( column < 6 ){
+            column = roads_south_to_north[column];
+        } else {
+            column = roads_north_to_south[column%6];
+        }
+        row = get_random(0,27);
+        if ( row > 13 ){
+            row += 6;
+        }
+    }
+    int index = row*MATRIX_COLUMNS + column;
+    return index;
+}
+
 void* plan_reparations(void *arg){
 
   int error_check;
@@ -2274,32 +2272,4 @@ void* plan_reparations(void *arg){
     int index = random_viable_index();
     repair_cell(index);
   }
-}
-
-int random_viable_index(){
-  int row;
-  int column;
-
-  if ( get_random(1,2) < 2 ) {
-    row = get_random(0, 3);
-    if(row < 2 ){
-      row = roads_east_to_west_rows[row];
-    } else {
-      row = roads_west_to_east_rows[row%2];
-    }
-    column = get_random(0,47);
-  } else {
-    column = get_random(0,11);
-    if( column < 6 ){
-      column = roads_south_to_north[column];
-    } else {
-      column = roads_north_to_south[column%6];
-    }
-    row = get_random(0,27);
-    if ( row > 13 ){
-      row += 6;
-    }
-  }
-  int index = row*MATRIX_COLUMNS + column;
-  return index;
 }

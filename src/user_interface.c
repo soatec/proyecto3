@@ -206,9 +206,15 @@ void update_vehicle_positions() {
         if (buses[bus] == NULL){
             continue;
         }
+
         SDL_BlitSurface(get_vehicle_image(buses[bus]), NULL, main_window_surface, &buses[bus]->image_position);
         buses[bus]->image_position.x = buses[bus]->position.pos_x;
         buses[bus]->image_position.y = buses[bus]->position.pos_y;
+        if (buses[bus]->direction == WEST){
+            buses[bus]->image_position.x -= 20;
+        } else if (buses[bus]->direction == NORTH){
+            buses[bus]->image_position.y -= 20;
+        }
     }
 
     // char* directions[5] = {"NORTH", "SOUTH","EAST","WEST", "DIRECTION_MAX"};
