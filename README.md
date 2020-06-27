@@ -9,9 +9,9 @@ utilizando la biblioteca Pthreads para el manejo de hilos de ejecucion.
 ####  Diseño General
 En Threadville hay recursos que deben ser compartidos armoniosamente por todos los vehículos. A fin de cuentas, su trabajo es
 escribir el Sistema Operativo de esta ciudad, el cual fundamentamente
-proporciona protección , dejando la administracion a los procesos.
+proporciona protección, dejando la administracion a los procesos.
 Estos procesos debieran ser escritos de la manera mas genérica posible: un automóvil, una ambulancia, un bus... todos son equivalentes
-(e.g., ¿bastara con un único tipo de thread que sabe manejar un veh´ıculo arbitrario?).
+(e.g., ¿bastará con un único tipo de thread que sabe manejar un vehículo arbitrario?).
 
 
 ## Estructura y compilación del proyecto
