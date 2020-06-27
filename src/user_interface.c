@@ -105,27 +105,60 @@ void button_event(kiss_button *button, SDL_Event *e, int *draw,
     if (kiss_button_event(button, e, draw)) *quit = 1;
 }
 
+static void button_car_event(kiss_button *button, SDL_Event *e,int *quit, int *draw)
+{
+    if (kiss_button_event(button, e, draw)) *quit = 1;
+}
+static void button_active_event(kiss_button *button, SDL_Event *e,int *quit, int *draw)
+{
+    if (kiss_button_event(button, e, draw)) *quit = 1;
+}
+
 int create_ui_buttons(){
     SDL_Renderer *renderer;
+    SDL_Event e;
     kiss_array objects;
     kiss_window window1;
-    kiss_button button_ok1 = {0};
+    kiss_button button_car = {0}, button_active = {0};
+    int entry_width, draw, quit;
+    quit = 0;
+    draw = 1;
+    entry_width = 250;
 
-    renderer = kiss_init("Threadville Control", &objects, 640, 480);
+    renderer = kiss_init("Threadville Control", &objects, 40, 30);
 	  if (!renderer) return 1;
 
     SDL_RenderClear(renderer);
 
     kiss_window_new(&window1, NULL, 1, 0, 0, kiss_screen_width, kiss_screen_height);
 
+    kiss_button_new(&button_car, &window1, "Car",
+                    kiss_screen_width / 2 -(2 * entry_width + 2 * kiss_up.w - kiss_edge) / 2,
+                    3 * kiss_normal.h);
+
+    kiss_button_new(&button_active, &window1, "active",
+                    50 + entry_width + kiss_edge + kiss_screen_width / 2 -(2 * entry_width + 2 * kiss_up.w - kiss_edge) / 2,
+                    3 * kiss_normal.h);
+
+
     window1.visible = 1;
 
-    kiss_button_new(&button_ok1, &window1, "OK", 0, 0);
+    while (!quit) {
+        /* Some code may be written here */
+        SDL_Delay(10);
+        while (SDL_PollEvent(&e)) {
+            if (e.type == SDL_QUIT) quit = 1;
 
-    kiss_window_draw(&window1, renderer);
+            kiss_window_event(&window1, &e, &draw);
+            button_car_event(&button_car, &e, &quit,&draw);
+            button_active_event(&button_active, &e, &quit,&draw);
 
-    kiss_button_draw(&button_ok1, renderer);
-
+        }
+        kiss_window_draw(&window1, renderer);
+        kiss_button_draw(&button_car, renderer);
+        kiss_button_draw(&button_active, renderer);
+        draw = 0;
+    }
     SDL_RenderPresent(renderer);
 
 /*
@@ -189,7 +222,7 @@ int initialize_ui() {
     shemp_up_pos.y = 280;
     shemp_down_pos.x = 760;
     shemp_down_pos.y = 380;
-    create_ui_buttons(main_window);
+    //create_ui_buttons(main_window);
 
     create_ui_buttons();
 
