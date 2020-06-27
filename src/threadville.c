@@ -279,10 +279,6 @@ cell_t first_bridge = {14, 7};
 
 threadville_resources_t threadville_resources;
 
-graph_node_t temp_graph[NODES_NUM][NODES_NUM];
-graph_node_t previous_connections_row[NODES_NUM];
-graph_node_t previous_connections_column[NODES_NUM];
-
 // Private functions
 
 cell_t get_cell(destination_t *destination){
@@ -1572,8 +1568,6 @@ void* load_matrix_data(void *arg) {
     double time_taken = ((double)t)/CLOCKS_PER_SEC; // calculate the elapsed time
     printf("Floyd took %f seconds to execute\n", time_taken);
 
-    copy_graph(threadville_resources.threadville_graph, temp_graph);
-
     pthread_mutex_lock(&threadville_resources.mutex);
     pthread_cond_broadcast(&threadville_resources.init_thread_done);
     pthread_mutex_unlock(&threadville_resources.mutex);
@@ -2225,45 +2219,6 @@ int middle_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
   pthread_mutex_unlock(&bridges_data[bridge_id].mutex);
 
   return status;
-}
-
-void disable_cell(int index){
-  for(int i = 0; i < NODES_NUM; i++){
-    if(index != i) {
-      temp_graph[index][i].weight = INF;
-      temp_graph[i][index].weight = INF;
-    }
-  }
-}
-
-void recalculate_weight(){
-  // Solve Floyd algorithm
-  for (int k = 0; k < NODES_NUM; k++)
-          for (int i = 0; i < NODES_NUM; i++)
-              for (int j = 0; j < NODES_NUM; j++)
-                  if (temp_graph[i][j].weight >
-                  temp_graph[i][k].weight +
-                  temp_graph[k][j].weight) {
-                      temp_graph[i][j].weight =
-                              temp_graph[i][k].weight +
-                              temp_graph[k][j].weight;
-                      temp_graph[i][j].index =
-                              temp_graph[k][j].index;
-  }
-}
-
-void get_previous_connections(int index){
-  for(int i = 0; i < NODES_NUM; i++){
-        previous_connections_row[i] = threadville_resources.threadville_graph[i][index];
-        previous_connections_column[i] = threadville_resources.threadville_graph[index][i];
-  }
-}
-
-void restore_previous_connections(graph_node_t graph_to_restore[NODES_NUM][NODES_NUM], int index){
-  for(int i = 0; i < NODES_NUM; i++){
-      graph_to_restore[i][index] = previous_connections_row[i];
-      graph_to_restore[index][i] = previous_connections_column[i];
-  }
 }
 
 void repair_cell(int index){

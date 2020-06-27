@@ -47,20 +47,7 @@ void update_repairs_position();
  */
 void update_vehicle_positions();
 
-/**
- * Collection of error messages pertaining sdl
- */
-void print_sdl_error(int errno);
 
-void create_new_custom_car();
-
-void create_new_random_car();
-
-void create_new_bus(color_e_t color);
-
-void create_new_ambulance();
-
-void disable_white_bus();
 
 
 #endif //PROYECTO3_USER_INTERFACE_H
