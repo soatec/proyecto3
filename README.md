@@ -37,6 +37,14 @@ cd build
 ./proyecto3
 ```
 
+## Faltó por implementar
+- Interacción con el usuario.
+- Información en pantalla de número de viajes de los carros.
+- Prioridad de paso de ambulancias por las intersecciones.
+- Protección en las rotondas.
+- Las intersecciones pueden quedar bloqueadas.
+- Larry y Joe funcionan por defecto con k = 1.
+
 ## Autores
 - Daniel Alvarado Chou.
 - Greylin Arias Montiel.
