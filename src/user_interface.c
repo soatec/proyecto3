@@ -113,7 +113,6 @@ static void button_active_event(kiss_button *button, SDL_Event *e,int *quit, int
 {
     if (kiss_button_event(button, e, draw)) *quit = 1;
 }
-
 int create_ui_buttons(){
     SDL_Renderer *renderer;
     SDL_Event e;
