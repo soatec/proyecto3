@@ -58,6 +58,9 @@
 
 #define HIGHWAY_Y_OFFSET_ROWS 19
 
+// Roundabout size in cars
+#define ROUNDABOUT_SIZE_CARS 16
+
 
 
 // Enums
@@ -423,6 +426,18 @@ typedef struct bridge_data_t {
     bridge_timer_ctrl_t timer_ctrl;
 } bridge_data_t;
 
+typedef struct roundabout_t {
+    // Center x position
+    int             cx;
+    // Center y position
+    int             cy;
+    int             radius;
+    // Size in cars
+    int             size;
+    direction_e_t   direction_per_cell[ROUNDABOUT_SIZE_CARS];
+} roundabout_t;
+
+
 // CONSTANTS
 
 // Bridge maximum capacity in cars
@@ -440,6 +455,10 @@ direction_e_t get_bridge_direction(bridge_e_t bridge) {
     bridge_data_t bridge_data = bridges_data[bridge];
     return bridge_data.timer_ctrl.direction;
 }
+
+roundabout_t roundabout_y;
+
+roundabout_t roundabout_z;
 
 // PRIVATE FUNCTIONS
 
@@ -553,7 +572,8 @@ cell_t get_old_cell_pos_int(cell_t cell){
     return old_cell;
 }
 
-position_t get_pos(cell_t cell){
+position_t get_pos(cell_t cell, vehicle_data_t *vehicle, bool new_destination){
+	printf("cell.row %d cell.column %d\n", cell.row, cell.column);
     position_t position;
     cell_t old_cell;
     position.pos_x = cell.column * threadville_resources.screen_position_data.height_car +
@@ -569,16 +589,39 @@ position_t get_pos(cell_t cell){
             }
             break;
         case HIGHWAY_CELL:
-        // TODO: Enhance roundabout positions
+        	position.pos_y -= HIGHWAY_Y_OFFSET_ROWS * threadville_resources.screen_position_data.height_car;
+        	break;
         case ROUNDABOUT_CELL:
-            position.pos_y -= HIGHWAY_Y_OFFSET_ROWS * threadville_resources.screen_position_data.height_car;
-            break;
+        	fprintf(stderr, "vehicle->roundabout_position %d\n", vehicle->roundabout_position);
+			vehicle->direction = roundabout_y.direction_per_cell[vehicle->roundabout_position];
+			if (cell.column == 0) {
+			  position.pos_x = trunc(roundabout_y.cx * threadville_resources.screen_position_data.height_car +
+							   	     roundabout_y.radius * cos((double)vehicle->roundabout_position * M_PI/8));
+			  position.pos_y = trunc(roundabout_y.cy * threadville_resources.screen_position_data.height_car +
+							   	   	 roundabout_y.radius * sin((double)vehicle->roundabout_position * M_PI/8));
+			} else {
+			  position.pos_x = trunc(roundabout_z.cx * threadville_resources.screen_position_data.height_car +
+							   	   	 roundabout_z.radius * cos((double)vehicle->roundabout_position * M_PI/8));
+			  position.pos_y = trunc(roundabout_z.cy * threadville_resources.screen_position_data.height_car +
+							   	   	 roundabout_z.radius * sin((double)vehicle->roundabout_position * M_PI/8));
+			}
+			if (new_destination) {
+				if (vehicle->type == BUS) {
+					vehicle->roundabout_position += 2;
+					vehicle->roundabout_position %= ROUNDABOUT_SIZE_CARS;
+				} else {
+					vehicle->roundabout_position += 1;
+					vehicle->roundabout_position %= ROUNDABOUT_SIZE_CARS;
+				}
+			}
+			break;
         case ESP_INTERSECTION_CELL:
             old_cell = get_old_cell_pos_int(cell);
             position.pos_x =  old_cell.column * threadville_resources.screen_position_data.height_car +
                               threadville_resources.screen_position_data.offset_x;
             position.pos_y = old_cell.row * threadville_resources.screen_position_data.height_car +
                              threadville_resources.screen_position_data.offset_y;
+            break;
         default:
             ;
     }
@@ -776,11 +819,11 @@ void update_initial_direction(destination_t *initial_destination, vehicle_data_t
 }
 
 void update_direction(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle){
-    position_t position = get_pos(*current_cell);
+    position_t position = get_pos(*current_cell, vehicle, false);
     double current_x = position.pos_x;
     double current_y = position.pos_y;
 
-    position = get_pos(*next_cell);
+    position = get_pos(*next_cell, vehicle, false);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
 
@@ -800,17 +843,19 @@ void update_direction(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *v
 
 
 void move(cell_t *current_cell, cell_t *next_cell, vehicle_data_t *vehicle, int micro_seconds){
-    position_t position = get_pos(*current_cell);
+    position_t position = get_pos(*current_cell, vehicle, false);
     double current_x = position.pos_x;
     double current_y = position.pos_y;
     vehicle->position.pos_x = current_x;
     vehicle->position.pos_y = current_y;
 
-    position = get_pos(*next_cell);
+    position = get_pos(*next_cell, vehicle, true);
     double final_x = position.pos_x;
     double final_y = position.pos_y;
 
-    update_direction(current_cell, next_cell, vehicle);
+    if (threadville_resources.cells_type[next_cell->row][next_cell->column] != ROUNDABOUT_CELL) {
+    	update_direction(current_cell, next_cell, vehicle);
+    }
 
     while(current_x != final_x || current_y != final_y) {
         if (current_x < final_x) {
@@ -848,7 +893,7 @@ void disable_vehicle(vehicle_data_t *vehicle, cell_node_t **current_cell_nodes,
 
     // Set current position to the first stop
     current_cell_nodes[0] = current_lists[0]->cell_node;
-    current_position = get_pos(current_cell_nodes[0]->cell);
+    current_position = get_pos(current_cell_nodes[0]->cell, vehicle, false);
     vehicle->position.pos_x = current_position.pos_x;
     vehicle->position.pos_y = current_position.pos_y;
 
@@ -916,7 +961,7 @@ void* move_vehicle(void *arg) {
     cell_list_t *current_lists[2];
 
     cell_t initial_cell = get_cell(&vehicle->destinations[0]);
-    position_t current_position = get_pos(initial_cell);
+    position_t current_position = get_pos(initial_cell, vehicle, false);
 
     // Set position before waitinf for init done
     vehicle->position.pos_x = current_position.pos_x;
@@ -971,7 +1016,7 @@ void* move_vehicle(void *arg) {
             disable_vehicle(vehicle, current_cell_nodes, current_lists, needed_cells);
         }
 
-        if (current_cell_nodes[0]->is_stop){
+        if (current_cell_nodes[0]->is_stop && !threadville_resources.cells_type[current_cell_nodes[0]->cell.row][current_cell_nodes[0]->cell.column]){
             sleep(time_to_wait);
         }
         current_cells[0] = &current_cell_nodes[0]->cell;
@@ -1084,6 +1129,8 @@ int get_time_to_wait(vehicle_data_t *vehicle) {
                     break;
                 case YELLOW:
                     seconds = 6;
+                default:
+                	;
             }
             break;
         case BUS:
@@ -1104,6 +1151,8 @@ int get_time_to_wait(vehicle_data_t *vehicle) {
                 case GREEN:
                 case BLUE:
                     seconds = 5;
+                default:
+                	;
             }
             break;
         case AMBULANCE:
@@ -1159,6 +1208,8 @@ void new_vehicle(vehicle_data_t *vehicle) {
             vehicle->color = 0;
     }
     vehicle->time_to_wait = get_time_to_wait(vehicle);
+
+    vehicle->roundabout_position = 0;
 
     vehicle->finished = false;
     error_check = pthread_mutex_init(&vehicle->mutex, NULL);
@@ -1515,15 +1566,38 @@ void* load_matrix_data(void *arg) {
     pthread_exit(NULL);
 }
 
+int initialize_roundabout() {
+    direction_e_t direction_data[] = {NORTH, NORTH,
+                                      WEST,  WEST,  WEST,  WEST,
+                                      SOUTH, SOUTH, SOUTH, SOUTH,
+                                      EAST,  EAST,  EAST,  EAST,
+                                      NORTH, NORTH};
+
+    roundabout_y.cx = 4;
+    roundabout_y.cy = 17;
+    roundabout_y.radius = 55;
+    roundabout_z.cx = 54;
+    roundabout_z.cy = 17;
+    roundabout_z.radius = 55;
+
+    for(int i = 0; i < ROUNDABOUT_SIZE_CARS; i++) {
+      roundabout_y.direction_per_cell[i] = direction_data[i];
+      roundabout_z.direction_per_cell[i] = direction_data[i];
+    }
+
+    return 0;
+}
+
 void set_screen_position_data(screen_position_data_t screen_position_data){
     int error_check;
     int ret;
     pthread_t thread;
 
-    error_check = initialize_bridges(1,
-                                5,
-                                5);
+    error_check = initialize_bridges(1, 5, 5);
     printf("STATUS: initialize_bridges %d\n", error_check);
+
+    error_check = initialize_roundabout();
+    printf("STATUS: initialize_roundabout %d\n", error_check);
 
     error_check = pthread_create(&thread, NULL, load_matrix_data, NULL);
     if (error_check != 0) {
@@ -1928,6 +2002,8 @@ int external_bridge_exit(vehicle_data_t *vehicle, bridge_e_t bridge_id) {
               break;
           case NORTH:
               entrance_cond = &bridges_data[bridge_id].north_entrance_traffic_ctrl;
+          default:
+          	;
       }
       status = pthread_cond_broadcast(entrance_cond);
       fprintf(stderr, "%s %d (status: %d)\n", __FUNCTION__, __LINE__, status);

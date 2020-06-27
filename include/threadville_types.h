@@ -214,6 +214,7 @@ typedef struct vehicle_data_t {
     destination_t    *destinations;
     pthread_t         thread;
     pthread_mutex_t   mutex;
+    int 			  roundabout_position;
 } vehicle_data_t;
 
 /**

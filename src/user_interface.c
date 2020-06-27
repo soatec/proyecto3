@@ -205,7 +205,7 @@ void update_vehicle_positions() {
         buses[bus]->image_position.y = buses[bus]->position.pos_y;
     }
 
-    char* directions[5] = {"NORTH", "SOUTH","EAST","WEST", "DIRECTION_MAX"};
+    // char* directions[5] = {"NORTH", "SOUTH","EAST","WEST", "DIRECTION_MAX"};
     //printf("%s\n", directions[]);
     if (get_bridge_direction(CURLY)==NORTH) {
         SDL_BlitSurface(light_green, NULL, main_window_surface, &curly_up_pos);
@@ -297,6 +297,7 @@ void core_loop() {
     create_new_ambulance();
     create_new_ambulance();
     create_new_ambulance();
+
 
     while(keep_window_open)
     {

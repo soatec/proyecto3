@@ -109,4 +109,10 @@ void disable_bus(vehicle_data_t *bus);
  */
 void enable_bus(vehicle_data_t *bus);
 
+/**
+ *
+ * @param bus
+ */
+direction_e_t get_bridge_direction(bridge_e_t bridge);
+
 #endif //PROYECTO3_THREADVILLE_H
