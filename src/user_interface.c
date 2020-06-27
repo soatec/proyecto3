@@ -119,28 +119,26 @@ int create_ui_buttons(){
     kiss_array objects;
     kiss_window window1;
     kiss_button button_car = {0}, button_active = {0};
-    int entry_width, draw, quit;
+    int draw, quit;
     quit = 0;
     draw = 1;
-    entry_width = 250;
 
-    renderer = kiss_init("Threadville Control", &objects, 40, 30);
-	  if (!renderer) return 1;
+    renderer = kiss_init("Threadville Control", &objects,500, 500);
+    if (!renderer) return 1;
 
-    SDL_RenderClear(renderer);
-
+    /* Arrange the widgets nicely relative to each other */
     kiss_window_new(&window1, NULL, 1, 0, 0, kiss_screen_width, kiss_screen_height);
 
-    kiss_button_new(&button_car, &window1, "Car",
-                    kiss_screen_width / 2 -(2 * entry_width + 2 * kiss_up.w - kiss_edge) / 2,
+
+    kiss_button_new(&button_car, &window1, "Sumit",
+                    kiss_screen_width / 4 ,3 * kiss_normal.h);
+
+    kiss_button_new(&button_active, &window1, "Sumit2",
+                    200 + kiss_screen_width / 4,
                     3 * kiss_normal.h);
-
-    kiss_button_new(&button_active, &window1, "active",
-                    50 + entry_width + kiss_edge + kiss_screen_width / 2 -(2 * entry_width + 2 * kiss_up.w - kiss_edge) / 2,
-                    3 * kiss_normal.h);
-
-
+    /* Do that, and all widgets associated with the window will show */
     window1.visible = 1;
+
 
     while (!quit) {
         /* Some code may be written here */
@@ -153,12 +151,16 @@ int create_ui_buttons(){
             button_active_event(&button_active, &e, &quit,&draw);
 
         }
+
+        if (!draw) continue;
+        SDL_RenderClear(renderer);
         kiss_window_draw(&window1, renderer);
         kiss_button_draw(&button_car, renderer);
         kiss_button_draw(&button_active, renderer);
+        SDL_RenderPresent(renderer);
         draw = 0;
     }
-    SDL_RenderPresent(renderer);
+    kiss_clean(&objects);
 
 /*
     renderer = SDL_CreateRenderer(window, -1, 0);
