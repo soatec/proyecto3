@@ -35,4 +35,8 @@ void free_vehicle_images();
  */
 SDL_Surface* get_vehicle_image(vehicle_data_t *vehicle);
 
+int create_ui_buttons();
+
+void create_new_random_car();
+
 #endif //PROYECTO3_USER_INTERFACE_H

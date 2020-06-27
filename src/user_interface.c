@@ -37,6 +37,17 @@ SDL_Rect curly_down_pos;
 SDL_Rect shemp_up_pos;
 SDL_Rect shemp_down_pos;
 
+    bool keep_window_open = true;
+
+
+    SDL_Renderer *renderer;
+    SDL_Event e;
+    kiss_array objects;
+    kiss_window window1;
+    kiss_button button_car = {0}, button_active = {0};
+    int draw, quit;
+    quit = 0;
+    draw = 1;
 //==================
 void create_new_ambulance(){
     vehicle_data_t *ambulance;
@@ -67,6 +78,7 @@ void create_new_random_car(){
     car->active = true;
     add_vehicle_to_list(cars, car);
     new_vehicle(car);
+    printf("%s\n", "HARAMBE");
 }
 
 void create_new_custom_car(){
@@ -107,21 +119,20 @@ void button_event(kiss_button *button, SDL_Event *e, int *draw,
 
 static void button_car_event(kiss_button *button, SDL_Event *e,int *quit, int *draw)
 {
-    if (kiss_button_event(button, e, draw)) *quit = 1;
+    if (kiss_button_event(button, e, draw)) 
+    {
+        printf("%s\n", "Haramaber");
+            create_new_random_car();
+    }
 }
 static void button_active_event(kiss_button *button, SDL_Event *e,int *quit, int *draw)
 {
-    if (kiss_button_event(button, e, draw)) *quit = 1;
+    if (kiss_button_event(button, e, draw))
+    {
+        keep_window_open = false;
+    }
 }
 int create_ui_buttons(){
-    SDL_Renderer *renderer;
-    SDL_Event e;
-    kiss_array objects;
-    kiss_window window1;
-    kiss_button button_car = {0}, button_active = {0};
-    int draw, quit;
-    quit = 0;
-    draw = 1;
 
     renderer = kiss_init("Threadville Control", &objects,500, 500);
     if (!renderer) return 1;
@@ -140,40 +151,6 @@ int create_ui_buttons(){
     window1.visible = 1;
 
 
-    while (!quit) {
-        /* Some code may be written here */
-        SDL_Delay(10);
-        while (SDL_PollEvent(&e)) {
-            if (e.type == SDL_QUIT) quit = 1;
-
-            kiss_window_event(&window1, &e, &draw);
-            button_car_event(&button_car, &e, &quit,&draw);
-            button_active_event(&button_active, &e, &quit,&draw);
-
-        }
-
-        if (!draw) continue;
-        SDL_RenderClear(renderer);
-        kiss_window_draw(&window1, renderer);
-        kiss_button_draw(&button_car, renderer);
-        kiss_button_draw(&button_active, renderer);
-        SDL_RenderPresent(renderer);
-        draw = 0;
-    }
-    kiss_clean(&objects);
-
-/*
-    renderer = SDL_CreateRenderer(window, -1, 0);
-    SDL_Rect rect1;
-    rect1.x = 50;
-    rect1.y = 50;
-    rect1.w = 200;
-    rect1.h = 32;
-    SDL_RenderDrawRect(renderer, &rect1);
-    SDL_SetRenderDrawColor(renderer, 255, 0, 0, 255); // the rect color (solid red)
-    SDL_RenderFillRect(renderer, &rect1);
-    SDL_RenderPresent(renderer); // copy to screen
-*/
 
     return 0;
 }
@@ -223,7 +200,6 @@ int initialize_ui() {
     shemp_up_pos.y = 280;
     shemp_down_pos.x = 760;
     shemp_down_pos.y = 380;
-    //create_ui_buttons(main_window);
 
     create_ui_buttons();
 
@@ -240,11 +216,13 @@ int initialize_ui() {
 
 void destroy_ui() {
     printf("%s\n", "Closing app...");
+
+    kiss_clean(&objects);
     free_vehicle_images();
     SDL_FreeSurface(light_red);
     SDL_FreeSurface(light_green);
     SDL_FreeSurface(city_background);
-    SDL_FreeSurface(main_window_surface);
+    //SDL_FreeSurface(main_window_surface);
     SDL_DestroyWindow(main_window);
     SDL_Quit();
 }
@@ -314,7 +292,6 @@ void disable_white_bus(){
 }
 
 void core_loop() {
-    bool keep_window_open = true;
 
     create_new_bus(RED);
     create_new_bus(GREEN);
@@ -325,7 +302,7 @@ void core_loop() {
     create_new_bus(PINK);
     create_new_bus(LIGHT_BLUE);
     create_new_bus(ORANGE);
-
+/*
     create_new_random_car();
     create_new_random_car();
     create_new_random_car();
@@ -380,11 +357,19 @@ void core_loop() {
     create_new_ambulance();
     create_new_ambulance();
     create_new_ambulance();
-
+*/
     while(keep_window_open)
     {
+
+        SDL_Delay(10);
         while(SDL_PollEvent(&window_event) > 0)
         {
+
+            if (window_event.type == SDL_QUIT) quit = 1;
+
+            kiss_window_event(&window1, &window_event, &draw);
+            button_car_event(&button_car, &window_event, &quit,&draw);
+            button_active_event(&button_active, &window_event, &quit,&draw);
             switch(window_event.type)
             {
                 case SDL_QUIT:
@@ -394,6 +379,13 @@ void core_loop() {
         }
         update_vehicle_positions();
 
+        if (!draw) continue;
+        SDL_RenderClear(renderer);
+        kiss_window_draw(&window1, renderer);
+        kiss_button_draw(&button_car, renderer);
+        kiss_button_draw(&button_active, renderer);
+        SDL_RenderPresent(renderer);
+        draw = 0;
     }
 }
 
