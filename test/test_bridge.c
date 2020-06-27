@@ -40,7 +40,7 @@ void test_bridge_basic(void) {
   // Create cars
   for (int car_num = 0; car_num < CARS_QUANTITY; car_num++) {
     car_array[car_num].id = car_num;
-    new_car(&car_array[car_num]);
+    new_vehicle(&car_array[car_num]);
   }
 
   // Wait for cars to finish
