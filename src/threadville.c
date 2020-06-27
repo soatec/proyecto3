@@ -2256,24 +2256,19 @@ void repair_cell(int index){
   repaired_index = index;
 
   printf("repairing %i node for %i seconds\n", index, repair_duration);
-
+  error_check = pthread_mutex_lock(&threadville_resources.threadville_matrix_mutexes[row][column]);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
+  repaired_index = index;
   sleep(repair_duration);
-
-
-  error_check = pthread_mutex_lock(&threadville_resources.mutex);
-  if (error_check != 0) {
-      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
-              errno, strerror(errno));
-  }
-  restore_previous_connections(threadville_resources.threadville_graph, index);
-  error_check = pthread_mutex_unlock(&threadville_resources.mutex);
-  if (error_check != 0) {
-      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
-              errno, strerror(errno));
-  }
-
-
   repaired_index = -1;
+  error_check = pthread_mutex_unlock(&threadville_resources.threadville_matrix_mutexes[row][column]);
+  if (error_check != 0) {
+      fprintf(stderr, "Error executing pthread_mutex_unlock. (Errno %d: %s)\n",
+              errno, strerror(errno));
+  }
 
   restore_previous_connections(temp_graph, index);
 
