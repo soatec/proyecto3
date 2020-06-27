@@ -121,7 +121,6 @@ static void button_car_event(kiss_button *button, SDL_Event *e,int *quit, int *d
 {
     if (kiss_button_event(button, e, draw)) 
     {
-        printf("%s\n", "Haramaber");
             create_new_random_car();
     }
 }
@@ -141,10 +140,10 @@ int create_ui_buttons(){
     kiss_window_new(&window1, NULL, 1, 0, 0, kiss_screen_width, kiss_screen_height);
 
 
-    kiss_button_new(&button_car, &window1, "Sumit",
+    kiss_button_new(&button_car, &window1, "NewCar",
                     kiss_screen_width / 4 ,3 * kiss_normal.h);
 
-    kiss_button_new(&button_active, &window1, "Sumit2",
+    kiss_button_new(&button_active, &window1, "EndSim",
                     200 + kiss_screen_width / 4,
                     3 * kiss_normal.h);
     /* Do that, and all widgets associated with the window will show */
